@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAIZ — Farm Analysis DST v3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!-- ============================================================
+     STYLES
+     ============================================================ -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap');
+
+:root {
+  --soil:   #2C1810; --earth:  #5C3D2E; --clay:   #A0714F;
+  --straw:  #E8D5A3; --leaf:   #3D6B4F; --leaf-l: #5A9B70;
+  --sky:    #B8D4E8; --sun:    #E8A020;
+  --alert:  #C0392B; --warn:   #E67E22; --ok:     #27AE60;
+  --bg:     #F5EFE0; --card:   #FFFDF5; --border: #D4C4A0;
+  --text:   #2C1810; --muted:  #7A6050;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── HEADER ── */
+header { background: var(--soil); color: var(--straw); padding: .4rem 1.2rem; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: .6rem; border-bottom: 3px solid var(--sun); position: sticky; top: 0; z-index: 300; flex-shrink: 0; flex-wrap: wrap; }
+header h1 { font-family: 'DM Serif Display', serif; font-size: 1.2rem; line-height: 1.2; }
+header h1 span { color: var(--sun); }
+.h-sub { font-size: 0.64rem; color: var(--clay); font-family: 'DM Mono', monospace; }
+.h-right { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.proj-pill { background: rgba(232,160,32,.18); border: 1px solid var(--sun); color: var(--straw); font-size: 0.68rem; padding: 0.16rem 0.65rem; border-radius: 20px; font-family: 'DM Mono', monospace; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: none; }
+.save-ts { font-size: 0.62rem; color: var(--clay); font-family: 'DM Mono', monospace; white-space: nowrap; opacity: .8; }
+.save-ts.flash { color: #7AE0A0; opacity: 1; }
+
+/* ── MAIN NAV ── */
+nav.main-nav { background: var(--earth); display: flex; overflow-x: auto; flex-shrink: 0; }
+nav.main-nav button { padding: 0.6rem 1.05rem; background: none; border: none; color: var(--straw); cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 0.81rem; font-weight: 500; letter-spacing: .03em; border-bottom: 3px solid transparent; transition: all .2s; white-space: nowrap; opacity: .65; }
+nav.main-nav button.active { border-bottom-color: var(--sun); opacity: 1; background: rgba(255,255,255,.06); }
+nav.main-nav button:hover { opacity: 1; }
+
+/* ── PARAM SUB-NAV ── */
+nav.sub-nav { background: var(--bg); border-bottom: 1px solid var(--border); display: none; flex-shrink: 0; padding: 0 1.5rem; gap: 0; overflow-x: auto; }
+nav.sub-nav.visible { display: flex; }
+nav.sub-nav button { padding: 0.5rem 1rem; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 500; color: var(--muted); white-space: nowrap; transition: all .2s; }
+nav.sub-nav button.active { color: var(--leaf); border-bottom-color: var(--leaf); font-weight: 600; }
+nav.sub-nav button:hover { color: var(--earth); }
+
+/* ── PAGES & PANELS ── */
+.page { display: none; padding: 1.6rem 2rem; max-width: 1080px; margin: 0 auto; width: 100%; }
+.page.active { display: block; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── TYPOGRAPHY ── */
+h2 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--earth); margin-bottom: .2rem; }
+h3 { font-family: 'DM Serif Display', serif; font-size: 1.05rem; color: var(--earth); margin-bottom: .8rem; padding-bottom: .4rem; border-bottom: 1px solid var(--border); }
+h4 { font-size: .87rem; font-weight: 700; color: var(--earth); margin-bottom: .55rem; }
+.sdesc { color: var(--muted); font-size: .86rem; margin-bottom: 1.3rem; }
+p { line-height: 1.7; font-size: .9rem; }
+
+/* ── CARDS ── */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem 1.35rem; margin-bottom: 1.1rem; box-shadow: 0 1px 4px rgba(44,24,16,.05); }
+.card-inner { background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: .8rem 1rem; margin-bottom: .6rem; }
+.card-inner.green  { background: rgba(61,107,79,.04); }
+.card-inner.amber  { background: rgba(232,160,32,.04); }
+.card-inner.brown  { background: rgba(160,113,79,.04); }
+
+/* ── FORMS ── */
+.fg   { display: flex; flex-direction: column; gap: .25rem; }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .8rem; }
+.fgrid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.fgrid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .8rem; }
+label { font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+label em { font-weight: 400; text-transform: none; font-family: 'DM Mono', monospace; font-size: .67rem; color: var(--clay); }
+input, select, textarea { padding: .45rem .6rem; border: 1.5px solid var(--border); border-radius: 6px; font-family: 'DM Mono', monospace; font-size: .86rem; background: var(--bg); color: var(--text); transition: border-color .2s; width: 100%; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--leaf); }
+textarea { resize: vertical; min-height: 56px; font-family: 'Outfit', sans-serif; font-size: .84rem; }
+
+/* ── BUTTONS ── */
+.btn { padding: .45rem 1.1rem; border: none; border-radius: 6px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: .83rem; transition: all .2s; display: inline-flex; align-items: center; gap: .3rem; }
+.btn-primary { background: var(--leaf);  color: white; } .btn-primary:hover  { background: var(--leaf-l); }
+.btn-earth   { background: var(--earth); color: var(--straw); } .btn-earth:hover { background: var(--soil); }
+.btn-accent  { background: var(--sun);   color: var(--soil); }  .btn-accent:hover  { filter: brightness(1.08); }
+.btn-danger  { background: var(--alert); color: white; }
+.btn-ghost   { background: transparent; border: 1.5px solid var(--border); color: var(--earth); } .btn-ghost:hover { border-color: var(--leaf); color: var(--leaf); }
+.btn-sm { padding: .25rem .65rem; font-size: .74rem; }
+.brow   { display: flex; gap: .55rem; flex-wrap: wrap; margin-top: .85rem; align-items: center; }
+
+/* ── TABLES ── */
+.tbl { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.tbl th { background: var(--earth); color: var(--straw); padding: .42rem .7rem; text-align: left; font-size: .7rem; font-weight: 700; letter-spacing: .04em; }
+.tbl td { padding: .35rem .6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl tr:hover td { background: rgba(93,61,46,.03); }
+.tbl input, .tbl select { padding: .25rem .4rem; font-size: .79rem; }
+
+/* ── CALLOUTS ── */
+.info-box { background: #E8F4F8; border-left: 3px solid var(--sky); border-radius: 0 6px 6px 0; padding: .65rem .9rem; font-size: .81rem; color: #1D4E6A; margin-bottom: .85rem; }
+.warn-box { background: #FFF8E6; border-left: 3px solid var(--warn); border-radius: 0 6px 6px 0; padding: .65rem .9rem; font-size: .81rem; color: #7A4500; margin-bottom: .85rem; }
+.err-box  { background: #FEE8E6; border-left: 3px solid var(--alert); border-radius: 0 6px 6px 0; padding: .65rem .9rem; font-size: .81rem; color: #7A1010; margin-bottom: .85rem; display: none; }
+
+/* ── BADGES & TAGS ── */
+.tag { display: inline-block; padding: .1rem .42rem; border-radius: 4px; font-size: .68rem; font-family: 'DM Mono', monospace; background: var(--straw); color: var(--earth); }
+.tag-green { background: var(--leaf); color: white; }
+.badge { display: inline-flex; align-items: center; gap: .28rem; padding: .16rem .62rem; border-radius: 20px; font-size: .77rem; font-weight: 600; }
+.b-ok   { background: #D4EDDA; color: #155724; }
+.b-warn { background: #FFF3CD; color: #856404; }
+.b-err  { background: #F8D7DA; color: #721c24; }
+
+/* ── ACCORDION ── */
+.acc-hdr  { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: .55rem 0; border-bottom: 1px solid var(--border); user-select: none; font-size: .88rem; font-weight: 600; color: var(--earth); }
+.acc-hdr:hover { color: var(--leaf); }
+.acc-body { display: none; padding-top: .7rem; }
+.acc-body.open { display: block; }
+.acc-arr  { font-size: .75rem; transition: transform .2s; }
+.acc-arr.open { transform: rotate(90deg); }
+
+/* ── LAND BAR ── */
+.land-track { height: 8px; background: var(--border); border-radius: 5px; overflow: hidden; margin: .28rem 0; }
+.land-fill  { height: 100%; border-radius: 5px; transition: width .3s, background .3s; }
+
+/* ── KPI GRID ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: .8rem; margin-bottom: 1.1rem; }
+.kpi { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .85rem 1rem; border-top: 3px solid var(--leaf); }
+.kpi.k-red { border-top-color: var(--alert); } .kpi.k-ora { border-top-color: var(--warn); }
+.kpi-l { font-size: .67rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.kpi-v { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--earth); line-height: 1.1; }
+.kpi-u { font-size: .67rem; color: var(--clay); font-family: 'DM Mono', monospace; }
+
+/* ── CHARTS ── */
+.cgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+.chart-wrap { position: relative; height: 250px; margin-top: .6rem; }
+
+/* ── RESPONSIVE ── */
+/* Tablet (≤ 768px) */
+@media (max-width: 768px) {
+  .page { padding: 1.1rem 1rem; }
+  .fgrid-2, .fgrid-3 { grid-template-columns: 1fr; }
+  .fgrid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .cgrid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  h2 { font-size: 1.2rem; }
+  h3 { font-size: .95rem; }
+  nav.main-nav button { padding: .55rem .75rem; font-size: .76rem; }
+  nav.sub-nav { padding: 0 .5rem; }
+  nav.sub-nav button { padding: .45rem .65rem; font-size: .74rem; }
+  .tbl { font-size: .77rem; }
+  .tbl th, .tbl td { padding: .3rem .4rem; }
+  .btn { padding: .5rem .9rem; font-size: .82rem; min-height: 40px; } /* touch-friendly */
+  .btn-sm { min-height: 34px; padding: .3rem .6rem; }
+  input, select { min-height: 38px; font-size: .9rem; } /* easier to tap */
+  .card { padding: .9rem 1rem; }
+}
+/* Phone (≤ 480px) */
+@media (max-width: 480px) {
+  .page { padding: .8rem .65rem; }
+  header h1 { font-size: 1.05rem; }
+  .h-sub { display: none; }
+  .proj-pill { max-width: 120px; font-size: .62rem; }
+  nav.main-nav button { padding: .5rem .55rem; font-size: .72rem; letter-spacing: 0; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-v { font-size: 1.2rem; }
+  .chart-wrap { height: 200px; }
+  .fgrid { grid-template-columns: 1fr; }
+  .row-between { flex-direction: column; align-items: flex-start; }
+  .brow { gap: .4rem; }
+}
+
+/* ── SESSION LIST ── */
+.sess-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .55rem; }
+.sess-item.act { border-color: var(--leaf); background: #F0F7F3; }
+
+/* ── PROJECT LIST ── */
+.proj-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .55rem; cursor: pointer; transition: all .2s; }
+.proj-item:hover { border-color: var(--clay); }
+.proj-item.act   { border-color: var(--leaf); background: #F0F7F3; }
+
+/* ── MISC ── */
+.sep  { height: 1px; background: var(--border); margin: 1rem 0; }
+.mono { font-family: 'DM Mono', monospace; }
+.muted { color: var(--muted); font-size: .86rem; }
+.pos  { color: var(--ok);    font-weight: 600; }
+.neg  { color: var(--alert); font-weight: 600; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HTML — SHELL
+     ============================================================ -->
+<header>
+  <div>
+    <h1>RAIZ <span>Farm Analysis</span></h1>
+    <div class="h-sub">Agroecological Decision Support Tool</div>
+  </div>
+  <div class="h-right">
+    <span id="save-ts" class="save-ts">—</span>
+    <div id="proj-pill" class="proj-pill"></div>
+  </div>
+</header>
+
+<nav class="main-nav">
+  <button id="nav-projects"  onclick="showPage('projects')">📁 Projects</button>
+  <button id="nav-params"    onclick="showPage('params')">⚙ Parameters</button>
+  <button id="nav-farms"     onclick="showPage('farms')">🌾 Farms</button>
+  <button id="nav-entry"     onclick="showPage('entry')">📋 Data Entry</button>
+  <button id="nav-results"   onclick="showPage('results')">📊 Results</button>
+  <button id="nav-scenarios" onclick="showPage('scenarios')">🔀 Scenarios</button>
+  <button id="nav-sessions"  onclick="showPage('sessions')">💾 Sessions &amp; Export</button>
+  <button id="nav-docs"      onclick="showPage('docs')">📖 Guide</button>
+</nav>
+
+<!-- PARAM SUB-NAV -->
+<nav class="sub-nav" id="sub-nav">
+  <button id="sub-info"    onclick="showPanel('info')">🗂 Project Info</button>
+  <button id="sub-cal"     onclick="showPanel('cal')">📅 Calendar</button>
+  <button id="sub-crops"   onclick="showPanel('crops')">🌽 Crop Products</button>
+  <button id="sub-members" onclick="showPanel('members')">👥 Member Types</button>
+  <button id="sub-labour"  onclick="showPanel('labour')">👷 Labour Price</button>
+  <button id="sub-cs"      onclick="showPanel('cs')">🌱 Cropping Systems</button>
+</nav>
+
+<!-- ============================================================
+     PAGE: PROJECTS
+     ============================================================ -->
+<div id="page-projects" class="page">
+  <h2>Projects</h2>
+  <p class="sdesc">Each project defines a farming environment (region, country, research context). Farms are stored inside their project. Only one project is active at a time.</p>
+
+  <div class="card">
+    <h3>➕ New Project</h3>
+    <div class="fgrid-2">
+      <div class="fg"><label>Project Name</label><input type="text" id="new-proj-name" placeholder="e.g. RAIZ Zimbabwe — Mutoko"></div>
+      <div class="fg"><label>Description</label><input type="text" id="new-proj-desc" placeholder="Region, context..."></div>
+    </div>
+    <div class="brow"><button class="btn btn-primary" onclick="createProject()">Create Project</button></div>
+  </div>
+
+  <div class="card">
+    <h3>📂 All Projects</h3>
+    <div id="proj-list"><div class="muted">No projects yet.</div></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: PARAMETERS  (sub-panels)
+     ============================================================ -->
+<div id="page-params" class="page">
+
+  <!-- SUB-PANEL: PROJECT INFO -->
+  <div id="panel-info" class="panel">
+    <h2>Project Info</h2>
+    <p class="sdesc">Basic identification for the active project.</p>
+    <div id="params-no-proj" class="warn-box">⚠ No active project. Go to 📁 Projects and select or create one.</div>
+    <div class="card" id="proj-info-card">
+      <h3>🗂 Identity</h3>
+      <div class="fgrid-2">
+        <div class="fg"><label>Name</label><input type="text" id="pi-name" oninput="activeProj().name=this.value; updatePill(); autosave()"></div>
+        <div class="fg"><label>Description</label><input type="text" id="pi-desc" oninput="activeProj().description=this.value; autosave()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUB-PANEL: CALENDAR -->
+  <div id="panel-cal" class="panel">
+    <h2>Calendar &amp; Periods</h2>
+    <p class="sdesc">Define how the agricultural year is divided. Days must sum to exactly 365.</p>
+    <div class="card">
+      <div class="row-between" style="margin-bottom:.8rem;">
+        <span id="cal-total" class="mono" style="font-size:.85rem;">Total: <strong>0</strong> / 365 days</span>
+        <button class="btn btn-ghost btn-sm" onclick="addPeriod()">+ Add Period</button>
+      </div>
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Name</th><th>Days</th><th>Description</th><th></th></tr></thead>
+        <tbody id="cal-tbody"></tbody>
+      </table>
+    </div>
+    <div class="brow"><button class="btn btn-accent" onclick="saveCalendar()">✓ Validate &amp; Save Calendar</button></div>
+  </div>
+
+  <!-- SUB-PANEL: CROP PRODUCTS -->
+  <div id="panel-crops" class="panel">
+    <h2>Crop Products</h2>
+    <p class="sdesc">All products that can be grown, consumed, sold or bought. Prices are per period.</p>
+    <div id="cp-list"></div>
+    <div class="brow"><button class="btn btn-ghost" onclick="addCropProduct()">+ Add Crop Product</button></div>
+  </div>
+
+  <!-- SUB-PANEL: MEMBER TYPES -->
+  <div id="panel-members" class="panel">
+    <h2>Household Member Types</h2>
+    <p class="sdesc">Define categories of household members with their labour capacity and consumption needs.</p>
+    <div id="mt-list"></div>
+    <div class="brow"><button class="btn btn-ghost" onclick="addMemberType()">+ Add Member Type</button></div>
+  </div>
+
+  <!-- SUB-PANEL: LABOUR PRICE -->
+  <div id="panel-labour" class="panel">
+    <h2>Hired Labour Price</h2>
+    <p class="sdesc">Daily wage for hired labour, applied to any task demand that exceeds household supply.</p>
+    <div class="card">
+      <div style="max-width:240px;">
+        <div class="fg"><label>Daily Wage <em>[USD / day]</em></label>
+          <input type="number" id="lab-price" min="0" step="0.5" value="5"
+            oninput="activeProj().hired_labour_price=parseFloat(this.value)||0; autosave()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUB-PANEL: CROPPING SYSTEMS -->
+  <div id="panel-cs" class="panel">
+    <h2>Cropping Systems</h2>
+    <p class="sdesc">Each cropping system defines what is produced, what labour tasks are needed, and what inputs are required — all per hectare per period.</p>
+    <div id="cs-list"></div>
+    <div class="brow"><button class="btn btn-ghost" onclick="addCroppingSystem()">+ Add Cropping System</button></div>
+  </div>
+
+</div><!-- end page-params -->
+
+<!-- ============================================================
+     PAGE: FARMS
+     ============================================================ -->
+<div id="page-farms" class="page">
+  <h2>Farm Profiles</h2>
+  <p class="sdesc">Farms belong to the active project. Switch projects to see different sets of farms.</p>
+  <div id="farms-warn" class="warn-box" style="display:none">⚠ No active project. Select one in 📁 Projects first.</div>
+
+  <div class="card" id="farm-create-card">
+    <h3>➕ New Farm Profile</h3>
+    <div class="fgrid-3">
+      <div class="fg"><label>Farm / Household ID</label><input type="text" id="new-farm-id" placeholder="e.g. F1A"></div>
+      <div class="fg"><label>Household Head</label><input type="text" id="new-farm-name" placeholder="e.g. Agnes Moyo"></div>
+      <div class="fg"><label>Village / District</label><input type="text" id="new-farm-village" placeholder="e.g. Guruve"></div>
+    </div>
+    <div class="brow"><button class="btn btn-primary" onclick="createFarm()">Create Profile</button></div>
+  </div>
+
+  <div class="card">
+    <h3>📁 Saved Profiles</h3>
+    <div id="farm-list"><div class="muted">No profiles yet.</div></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: DATA ENTRY
+     ============================================================ -->
+<div id="page-entry" class="page">
+  <h2>Data Entry</h2>
+  <p class="sdesc">Enter household data for the selected farm. Changes auto-save to the active project.</p>
+  <div class="info-box">Active farm: <strong id="entry-farm-lbl">None selected — go to 🌾 Farms first.</strong></div>
+
+  <div class="card">
+    <h3>👨‍👩‍👧 Household Composition</h3>
+    <p class="muted" style="margin-bottom:.75rem;">Number of each member type in the household.</p>
+    <div id="hh-comp" class="fgrid"></div>
+  </div>
+
+  <div class="card">
+    <h3>📐 Farm Structure</h3>
+    <div style="max-width:220px;">
+      <div class="fg"><label>Total Farm Area <em>[ha]</em></label>
+        <input type="number" id="farm-area" min="0.1" step="0.1" value="2.0" oninput="onAreaChange()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>💵 Non-Farm Income Sources</h3>
+    <p class="muted" style="margin-bottom:.75rem;">Off-farm wages, remittances, etc. Amounts in USD per period.</p>
+    <div id="nfi-list"></div>
+    <div class="brow"><button class="btn btn-ghost btn-sm" onclick="addNFI()">+ Add Income Source</button></div>
+  </div>
+
+  <div class="card">
+    <h3>🌱 Crop Plan</h3>
+    <div id="land-bar-wrap">
+      <div class="row-between" style="margin-bottom:.2rem;">
+        <span style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Land Allocation</span>
+        <span id="land-lbl" class="mono" style="font-size:.8rem;color:var(--earth);">0.00 / 0.00 ha</span>
+      </div>
+      <div class="land-track"><div id="land-fill" class="land-fill" style="width:0%;background:var(--leaf)"></div></div>
+      <div id="land-msg" style="font-size:.74rem;color:var(--muted);margin-top:.15rem;"></div>
+    </div>
+    <table class="tbl" style="margin-top:.75rem;">
+      <thead><tr><th>Cropping System</th><th>Area (ha)</th><th></th></tr></thead>
+      <tbody id="cp-tbody"></tbody>
+    </table>
+    <div class="brow"><button class="btn btn-ghost btn-sm" onclick="addCropRow()">+ Add Row</button></div>
+  </div>
+
+  <div id="entry-warn" style="display:none;background:#FFF3CD;border:1.5px solid #FBBF24;border-radius:8px;padding:.75rem 1rem;margin-bottom:.9rem;">
+    <div style="font-weight:700;font-size:.82rem;color:#92400E;margin-bottom:.3rem;">⚠ Constraint Warnings</div>
+    <ul id="entry-warn-list" style="margin:0;padding-left:1.1rem;font-size:.8rem;color:#78350F;"></ul>
+  </div>
+
+  <div class="brow">
+    <button class="btn btn-accent" onclick="runAnalysis()">▶ Run Analysis &amp; View Results</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: RESULTS
+     ============================================================ -->
+<div id="page-results" class="page">
+  <h2>Results</h2>
+  <p class="sdesc">Baseline analysis — <strong id="res-farm-lbl">—</strong></p>
+
+  <div class="card">
+    <h3>🏠 Resilience Summary</h3>
+    <div style="display:flex;gap:2rem;flex-wrap:wrap;align-items:center;">
+      <div><div style="font-size:.67rem;color:var(--muted);margin-bottom:.28rem;">FOOD SECURITY</div><div id="rs-food" class="badge b-ok">● —</div></div>
+      <div><div style="font-size:.67rem;color:var(--muted);margin-bottom:.28rem;">ECONOMIC SECURITY</div><div id="rs-econ" class="badge b-ok">● —</div></div>
+      <div><div style="font-size:.67rem;color:var(--muted);margin-bottom:.28rem;">OVERALL RESILIENCE</div><div id="rs-overall" class="badge b-ok">● —</div></div>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <div class="cgrid">
+    <div class="card"><h3>💰 Cash Flow by Period</h3><div class="chart-wrap"><canvas id="ch-cash"></canvas></div></div>
+    <div class="card"><h3>📊 Gross Margin by Cropping System</h3><div class="chart-wrap"><canvas id="ch-gm"></canvas></div></div>
+  </div>
+
+  <div id="food-section"></div>
+
+  <div class="card">
+    <h3>👷 Labour Balance by Period</h3>
+    <div id="labour-wrap"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: SCENARIOS
+     ============================================================ -->
+<div id="page-scenarios" class="page">
+  <h2>Scenarios</h2>
+  <p class="sdesc">Define an alternative crop plan and compare it with the baseline. Household composition and non-farm income remain unchanged.</p>
+
+  <div class="card">
+    <h3>🔀 Scenario Crop Plan</h3>
+    <table class="tbl">
+      <thead><tr><th>Cropping System</th><th>Area (ha)</th><th></th></tr></thead>
+      <tbody id="sc-tbody"></tbody>
+    </table>
+    <div class="brow">
+      <button class="btn btn-ghost btn-sm" onclick="addScRow()">+ Add Row</button>
+      <button class="btn btn-accent" onclick="runScenario()">▶ Run Scenario</button>
+    </div>
+  </div>
+
+  <div id="sc-results" style="display:none;">
+    <div class="card">
+      <h3>📋 Baseline vs Scenario</h3>
+      <table class="tbl"><thead><tr><th>Indicator</th><th>Baseline</th><th>Scenario</th><th>Change</th></tr></thead>
+      <tbody id="sc-cmp-tbody"></tbody></table>
+    </div>
+    <div class="cgrid">
+      <div class="card"><h3>💰 Cash Flow Comparison</h3><div class="chart-wrap"><canvas id="ch-sc-cash"></canvas></div></div>
+      <div class="card"><h3>📊 Gross Margin Comparison</h3><div class="chart-wrap"><canvas id="ch-sc-gm"></canvas></div></div>
+    </div>
+    <div id="sc-food-section"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: SESSIONS & EXPORT
+     ============================================================ -->
+<div id="page-sessions" class="page">
+  <h2>Sessions &amp; Export</h2>
+  <p class="sdesc">Save your work, share it with colleagues, and export farm data for research analysis — all in one place.</p>
+
+  <!-- ── SAVE / LOAD ── -->
+  <div class="card">
+    <h3>💾 Save &amp; Share Sessions</h3>
+    <p class="muted" style="margin-bottom:.8rem;">A session captures <strong>all projects and all farms</strong>. Use <em>Save to Browser</em> for quick checkpoints on this device. Use <em>Download .json</em> as your permanent backup and to share with colleagues.</p>
+    <div style="max-width:400px;">
+      <div class="fg"><label>Session Name</label>
+        <input type="text" id="sess-name" placeholder="e.g. Mutoko_fieldvisit_2025-11-21">
+      </div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-primary" onclick="saveSession()">💾 Save to Browser</button>
+      <button class="btn btn-earth"   onclick="downloadSession()">⬇ Download .json</button>
+      <label  class="btn btn-ghost btn-sm" style="cursor:pointer;">
+        ⬆ Load from file
+        <input type="file" accept=".json" style="display:none" onchange="loadFromFile(event)">
+      </label>
+    </div>
+  </div>
+
+  <!-- ── SAVED SESSIONS LIST ── -->
+  <div class="card">
+    <h3>📂 Saved Sessions</h3>
+    <div id="sess-list"><div class="muted">No sessions saved yet.</div></div>
+  </div>
+
+  <!-- ── EXPORT FOR RESEARCH ── -->
+  <div class="card" style="border-top: 3px solid var(--sun);">
+    <h3>📤 Export Farm Data for Research</h3>
+    <p class="muted" style="margin-bottom:.5rem;">Exports all farms and their results for the <strong>active project</strong>. Run the analysis on each farm first to include results.</p>
+
+    <!-- Status summary -->
+    <div id="export-status" style="background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.82rem;"></div>
+
+    <div class="brow" style="margin-top:0;">
+      <button class="btn btn-accent" onclick="doExportCSV()">⬇ Download CSV</button>
+      <button class="btn btn-ghost"  onclick="doExportJSON()">⬇ Download JSON</button>
+    </div>
+
+    <div style="margin-top:1rem;padding-top:.9rem;border-top:1px dashed var(--border);">
+      <h4 style="margin-bottom:.5rem;">What each format contains</h4>
+      <table class="tbl">
+        <thead><tr><th>Format</th><th>Best for</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>CSV</strong></td>
+            <td>Excel, R, Python, STATA</td>
+            <td>One row per farm — all household data, all KPI results, food balance per product, labour totals. Ready for statistical analysis.</td>
+          </tr>
+          <tr>
+            <td><strong>JSON</strong></td>
+            <td>Programmatic analysis, database import</td>
+            <td>Full structured data for the active project — all farms, all parameters, all calculated results. Not intended for reloading into the tool (use Sessions for that).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     PAGE: DOCUMENTATION / USER GUIDE
+     ============================================================ -->
+<div id="page-docs" class="page">
+  <h2>📖 User Guide &amp; Model Reference</h2>
+  <p class="sdesc">Complete documentation for field agents and researchers. Use the sections below to navigate.</p>
+
+  <style>
+    /* Docs-specific styles */
+    .doc-toc { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.3rem; margin-bottom: 1.4rem; }
+    .doc-toc h4 { margin-bottom: .6rem; color: var(--earth); }
+    .doc-toc ol { padding-left: 1.2rem; }
+    .doc-toc li { margin-bottom: .25rem; font-size: .85rem; }
+    .doc-toc a { color: var(--leaf); text-decoration: none; }
+    .doc-toc a:hover { text-decoration: underline; }
+    .doc-section { scroll-margin-top: 80px; margin-bottom: 2rem; }
+    .doc-section h3 { font-size: 1.1rem; border-bottom: 2px solid var(--border); }
+    .doc-section h4 { font-size: .9rem; font-weight: 700; color: var(--earth); margin: 1rem 0 .4rem; }
+    .doc-section p { font-size: .88rem; line-height: 1.75; margin-bottom: .6rem; color: var(--text); }
+    .doc-section ul, .doc-section ol { padding-left: 1.3rem; font-size: .87rem; line-height: 1.75; color: var(--text); margin-bottom: .6rem; }
+    .doc-section li { margin-bottom: .2rem; }
+    .eq-box { background: var(--soil); color: var(--straw); border-radius: 8px; padding: .75rem 1.1rem; margin: .6rem 0; font-family: 'DM Mono', monospace; font-size: .83rem; line-height: 1.8; overflow-x: auto; }
+    .eq-box .eq-comment { color: var(--clay); font-style: italic; }
+    .var-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin: .5rem 0 .9rem; }
+    .var-table th { background: var(--earth); color: var(--straw); padding: .38rem .65rem; text-align: left; font-size: .7rem; letter-spacing: .04em; }
+    .var-table td { padding: .35rem .65rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .var-table td:first-child { font-family: 'DM Mono', monospace; font-weight: 600; color: var(--leaf); white-space: nowrap; }
+    .var-table td:nth-child(2) { color: var(--muted); font-size: .77rem; white-space: nowrap; }
+    .step-list { counter-reset: steps; list-style: none; padding: 0; }
+    .step-list li { counter-increment: steps; display: flex; gap: .8rem; margin-bottom: .9rem; align-items: flex-start; }
+    .step-list li::before { content: counter(steps); background: var(--leaf); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; margin-top: .05rem; }
+    .step-body strong { display: block; font-size: .88rem; margin-bottom: .15rem; color: var(--earth); }
+    .step-body p { margin: 0; font-size: .83rem; color: var(--muted); }
+    .warn-inline { color: var(--warn); font-weight: 600; }
+    .ok-inline   { color: var(--ok);   font-weight: 600; }
+    .tag-doc { display: inline-block; padding: .08rem .38rem; border-radius: 4px; font-size: .72rem; font-family: 'DM Mono', monospace; background: var(--straw); color: var(--earth); }
+  </style>
+
+  <div class="doc-toc">
+    <h4>Contents</h4>
+    <ol>
+      <li><a href="#doc-overview">Overview &amp; Purpose</a></li>
+      <li><a href="#doc-storage">Data Storage &amp; Sessions</a></li>
+      <li><a href="#doc-workflow">Step-by-Step Workflow</a></li>
+      <li><a href="#doc-projects">Projects &amp; Parameters</a></li>
+      <li><a href="#doc-farms">Farms &amp; Data Entry</a></li>
+      <li><a href="#doc-model">Model Equations &amp; Calculations</a></li>
+      <li><a href="#doc-results">Reading Results</a></li>
+      <li><a href="#doc-scenarios">Scenarios &amp; Comparison</a></li>
+      <li><a href="#doc-sessions-export">Sessions &amp; Export</a></li>
+      <li><a href="#doc-constraints">Constraints &amp; Validation</a></li>
+      <li><a href="#doc-android">Using on Tablet / Phone</a></li>    </ol>
+  </div>
+
+  <!-- 1. OVERVIEW -->
+  <div class="doc-section" id="doc-overview">
+    <h3>1 · Overview &amp; Purpose</h3>
+    <p>The RAIZ Farm Analysis DST (Decision Support Tool) is a fully offline, browser-based tool for Extension Service Agents working with smallholder farmers in agroecological intensification projects.</p>
+    <p>It converts a farm management model into a field-usable interface that allows agents to:</p>
+    <ul>
+      <li>Define a local farming context (crops, calendar, labour, cropping systems) once as a <strong>Project</strong></li>
+      <li>Record individual household farm data as <strong>Farm Profiles</strong></li>
+      <li>Calculate food security, economic resilience, and labour balance for each farm</li>
+      <li>Simulate alternative crop plans and compare them with the current situation (<strong>Scenarios</strong>)</li>
+      <li>Export farm data as CSV or JSON for centralised research analysis, directly from the Sessions tab</li>
+    </ul>
+    <p>The tool runs entirely in the browser. No internet connection is needed after opening the file. No data is sent to any server.</p>
+    <h4>Navigation — 7 tabs</h4>
+    <table class="var-table">
+      <thead><tr><th>Tab</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>📁 Projects</td><td>Create and switch between project environments</td></tr>
+        <tr><td>⚙ Parameters</td><td>Define calendar, crop products, member types, labour price, cropping systems for the active project</td></tr>
+        <tr><td>🌾 Farms</td><td>Create and manage farm profiles within the active project</td></tr>
+        <tr><td>📋 Data Entry</td><td>Enter household data and crop plan for the selected farm</td></tr>
+        <tr><td>📊 Results</td><td>View analysis results — KPIs, cash flow, food balance, labour</td></tr>
+        <tr><td>🔀 Scenarios</td><td>Define and compare an alternative crop plan against the baseline</td></tr>
+        <tr><td>💾 Sessions &amp; Export</td><td>Save/load named snapshots, download .json backup, export CSV/JSON for research</td></tr>
+        <tr><td>📖 Guide</td><td>This documentation</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 2. STORAGE -->
+  <div class="doc-section" id="doc-storage">
+    <h3>2 · Data Storage &amp; Sessions</h3>
+    <h4>Auto-save (browser storage)</h4>
+    <p>Every change you make is saved automatically to <strong>localStorage</strong> — the browser's built-in storage on your device. The header shows a <span class="ok-inline">💾 HH:MM:SS</span> timestamp each time this happens.</p>
+    <p><span class="warn-inline">⚠ localStorage is not permanent backup.</span> It is lost if you clear browser history, open the file from a different folder, or use a different device.</p>
+    <h4>Sessions &amp; Export tab — three things in one place</h4>
+    <p>The <strong>💾 Sessions &amp; Export</strong> tab handles all data persistence and sharing. It has three sections:</p>
+    <ul>
+      <li><strong>Save &amp; Share Sessions</strong> — name and save a checkpoint to the browser, download a .json backup file, or load a .json file from a colleague.</li>
+      <li><strong>Saved Sessions list</strong> — all named checkpoints stored in the browser on this device. Load, download individually, or delete.</li>
+      <li><strong>Export Farm Data for Research</strong> — download the active project's farm data as <strong>CSV</strong> (for Excel/R/Python) or <strong>JSON</strong> (for programmatic analysis). A live status panel shows which farms have results ready to export.</li>
+    </ul>
+    <h4>Session .json vs Export files — what is the difference?</h4>
+    <table class="var-table">
+      <thead><tr><th></th><th>Session .json</th><th>Export CSV / JSON</th></tr></thead>
+      <tbody>
+        <tr><td>Contains</td><td>All projects + all farms + all parameters</td><td>Active project farms + results only</td></tr>
+        <tr><td>Purpose</td><td>Backup, restore, share full working state</td><td>Research analysis, statistics, database</td></tr>
+        <tr><td>Can reload into tool?</td><td>✅ Yes — via Load from file</td><td>❌ Not intended for that</td></tr>
+        <tr><td>Opens in Excel?</td><td>❌ Not directly</td><td>✅ CSV opens directly in Excel</td></tr>
+      </tbody>
+    </table>
+    <h4>Recommended practice</h4>
+    <ul>
+      <li>At the end of each field day: save a named session and download the .json</li>
+      <li>Name sessions descriptively: <span class="tag-doc">Mutoko_2025-11-21</span></li>
+      <li>Before sharing with a colleague: download a session .json and send the file</li>
+      <li>When starting on a new device: load from file using yesterday's .json</li>
+      <li>After running analysis on all farms: download CSV for the research team</li>
+    </ul>
+  </div>
+
+  <!-- 3. WORKFLOW -->
+  <div class="doc-section" id="doc-workflow">
+    <h3>3 · Step-by-Step Workflow</h3>
+    <ul class="step-list">
+      <li><div class="step-body"><strong>Create a Project</strong><p>Go to 📁 Projects → enter a name and description → Create Project. Click ⚙ Edit to open the Parameters panel.</p></div></li>
+      <li><div class="step-body"><strong>Define the Calendar</strong><p>Parameters → 📅 Calendar. Add periods (e.g. 4 periods of 92/90/91/92 days). Total must equal exactly 365.</p></div></li>
+      <li><div class="step-body"><strong>Define Crop Products</strong><p>Parameters → 🌽 Crop Products. Add every product that farms in this project grow, consume, sell, or buy. Enter selling and buying prices per period.</p></div></li>
+      <li><div class="step-body"><strong>Define Member Types</strong><p>Parameters → 👥 Member Types. Add household member categories (adult male, adult female, child...). Set labour capacity (days/year) and consumption needs per crop product.</p></div></li>
+      <li><div class="step-body"><strong>Set Hired Labour Price</strong><p>Parameters → 👷 Labour Price. Enter the daily wage for hired labour in USD/day.</p></div></li>
+      <li><div class="step-body"><strong>Define Cropping Systems</strong><p>Parameters → 🌱 Cropping Systems. For each system add outputs (yield kg/ha/period per product), labour tasks (days/ha/period), and inputs (USD/ha/period).</p></div></li>
+      <li><div class="step-body"><strong>Create Farm Profiles</strong><p>Go to 🌾 Farms. Enter Farm ID, name, village → Create Profile. Then click Edit to go to data entry.</p></div></li>
+      <li><div class="step-body"><strong>Enter Farm Data</strong><p>📋 Data Entry: fill in household composition, farm area, non-farm income sources, and the crop plan (which cropping systems, how many ha each).</p></div></li>
+      <li><div class="step-body"><strong>Run the Analysis</strong><p>Click ▶ Run Analysis. Results appear in 📊 Results: resilience badges, KPIs, cash flow chart, food balance per product, labour table.</p></div></li>
+      <li><div class="step-body"><strong>Run a Scenario</strong><p>Go to 🔀 Scenarios. Define an alternative crop plan and click ▶ Run Scenario to see side-by-side comparison with the baseline.</p></div></li>
+      <li><div class="step-body"><strong>Save &amp; Export</strong><p>💾 Sessions &amp; Export → give the session a name → Save to Browser + Download .json (your backup). Then scroll down to <em>Export Farm Data for Research</em> → Download CSV to send to the research team.</p></div></li>
+    </ul>
+  </div>
+
+  <!-- 4. PROJECTS -->
+  <div class="doc-section" id="doc-projects">
+    <h3>4 · Projects &amp; Parameters</h3>
+    <p>A Project defines the shared reference world for a set of farms. All parameter values — yields, prices, labour requirements — come from the active project. One project is active at a time; switching projects changes the context for Farms and Data Entry.</p>
+    <h4>Calendar</h4>
+    <p>The model operates on a year of exactly 365 days divided into user-defined periods. Period names (e.g. P1, P2, Planting, Harvest) are used throughout the interface and in all charts. The number of periods is flexible — a typical Zimbabwe setup uses 4 periods.</p>
+    <h4>Crop Products</h4>
+    <p>Any product that can be grown, consumed, sold or bought. Selling price and buying price are defined per period, allowing seasonal price variation. The buying price is used when a household's production falls short of its consumption needs.</p>
+    <h4>Household Member Types</h4>
+    <p>Member categories carry two quantities: <strong>labour capacity</strong> (days/year, prorated to each period by its length) and <strong>consumption needs</strong> per crop product (kg/year). A household's total consumption need is derived from the sum across all members of each type.</p>
+    <h4>Cropping Systems</h4>
+    <p>A cropping system is a complete management package. It defines:</p>
+    <ul>
+      <li><strong>Outputs</strong> — which crop products are produced, in what quantities (kg/ha) in each period</li>
+      <li><strong>Labour tasks</strong> — named operations with labour requirements (days/ha) per period</li>
+      <li><strong>Inputs</strong> — named inputs with monetary costs (USD/ha) per period</li>
+    </ul>
+    <p>This structure replaces the fixed good-year/bad-year and Ext/Int categories from earlier versions. Each scenario corresponds to a named cropping system defined by the researcher.</p>
+  </div>
+
+  <!-- 5. FARMS -->
+  <div class="doc-section" id="doc-farms">
+    <h3>5 · Farms &amp; Data Entry</h3>
+    <h4>Household Composition</h4>
+    <p>For each member type defined in the project, enter the count for this household. This drives both total labour supply and total food consumption needs.</p>
+    <h4>Farm Area</h4>
+    <p>Total land area available. The land allocation bar in the crop plan section shows the sum of all plot areas against this total in real time. The analysis is blocked if total cropped area exceeds farm area.</p>
+    <h4>Non-Farm Income Sources</h4>
+    <p>Any income not derived from crop sales — wages, remittances, petty trade. Entered as USD amounts per period. Multiple sources can be added. These contribute directly to household cash flow.</p>
+    <h4>Crop Plan</h4>
+    <p>A list of cropping system + area (ha) pairs. One farm can have several cropping systems on different plots. The same cropping system can appear more than once (e.g. two separate plots under the same management).</p>
+  </div>
+
+  <!-- 6. MODEL EQUATIONS -->
+  <div class="doc-section" id="doc-model">
+    <h3>6 · Model Equations &amp; Calculations</h3>
+    <p>The engine runs entirely in the browser (see <span class="tag-doc">js-engine</span> block). All calculations are per-period unless stated otherwise. <em>i</em> = period index (0 to N−1), <em>cs</em> = cropping system, <em>cp</em> = crop product, <em>mt</em> = member type, <em>row</em> = one line of the crop plan.</p>
+
+    <h4>6.1 · Labour Supply</h4>
+    <p>Available household labour in each period, prorated by the number of days in that period:</p>
+    <div class="eq-box">
+HH_supply[i] = Σ<sub>mt</sub> ( count[mt] × labour_days[mt] × (days[i] / 365) )
+<span class="eq-comment">// Summed over all member types in the household</span>
+    </div>
+    <table class="var-table">
+      <thead><tr><th>Variable</th><th>Unit</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>count[mt]</td><td>persons</td><td>Household composition (Data Entry)</td></tr>
+        <tr><td>labour_days[mt]</td><td>days/year</td><td>Member type definition (Parameters)</td></tr>
+        <tr><td>days[i]</td><td>days</td><td>Calendar period length (Parameters)</td></tr>
+      </tbody>
+    </table>
+
+    <h4>6.2 · Labour Demand &amp; Hired Labour</h4>
+    <p>Total labour required by the crop plan in each period:</p>
+    <div class="eq-box">
+labour_demand[i] = Σ<sub>row</sub> Σ<sub>task</sub> ( labour_ha[task,i] × area_ha[row] )
+<span class="eq-comment">// Summed over all crop plan rows and all tasks in each cropping system</span>
+
+hired_days[i]  = max( 0,  labour_demand[i] − HH_supply[i] )
+hired_cost[i]  = hired_days[i] × hired_labour_price
+    </div>
+    <table class="var-table">
+      <thead><tr><th>Variable</th><th>Unit</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>labour_ha[task,i]</td><td>days/ha</td><td>Cropping system task definition</td></tr>
+        <tr><td>area_ha[row]</td><td>ha</td><td>Crop plan row</td></tr>
+        <tr><td>hired_labour_price</td><td>USD/day</td><td>Parameters → Labour Price</td></tr>
+      </tbody>
+    </table>
+
+    <h4>6.3 · Input Costs</h4>
+    <div class="eq-box">
+input_cost[i] = Σ<sub>row</sub> Σ<sub>inp</sub> ( cost_ha[inp,i] × area_ha[row] )
+<span class="eq-comment">// Summed over all crop plan rows and all inputs in each cropping system</span>
+    </div>
+
+    <h4>6.4 · Production</h4>
+    <p>Quantity of each crop product produced per period:</p>
+    <div class="eq-box">
+prod[cp,i] = Σ<sub>row</sub> ( yield_ha[cs(row),cp,i] × area_ha[row] )
+<span class="eq-comment">// Only rows whose cropping system defines an output for cp</span>
+
+tot_prod[cp] = Σ<sub>i</sub> prod[cp,i]
+<span class="eq-comment">// Total annual production across all periods</span>
+    </div>
+
+    <h4>6.5 · Household Food Need</h4>
+    <div class="eq-box">
+hh_need[cp] = Σ<sub>mt</sub> ( count[mt] × kg_year[mt,cp] )
+<span class="eq-comment">// Annual consumption need for each crop product, summed over all member types</span>
+    </div>
+    <table class="var-table">
+      <thead><tr><th>Variable</th><th>Unit</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>kg_year[mt,cp]</td><td>kg/year</td><td>Member type consumption need (Parameters)</td></tr>
+      </tbody>
+    </table>
+
+    <h4>6.6 · Food Balance &amp; Trade</h4>
+    <p>Annual balance determines whether the household sells surplus or buys deficit. The balance is computed once per year (summing all periods), then distributed across periods for cash flow purposes.</p>
+    <div class="eq-box">
+balance[cp] = tot_prod[cp] − hh_need[cp]
+
+<span class="eq-comment">// SURPLUS — household sells the excess</span>
+if balance[cp] ≥ 0:
+  sold_kg[cp]    = balance[cp]
+  sell_rev[cp,i] = (prod[cp,i] / tot_prod[cp]) × sold_kg[cp] × sell_price[cp,i]
+  <span class="eq-comment">  // Revenue distributed proportionally to when production occurs</span>
+
+<span class="eq-comment">// DEFICIT — household must purchase the shortfall</span>
+if balance[cp] &lt; 0:
+  purchase_kg[cp]   = −balance[cp]
+  buy_cost[cp,i]    = (purchase_kg[cp] / N) × buy_price[cp,i]
+  <span class="eq-comment">  // Purchases spread equally across all periods</span>
+    </div>
+    <table class="var-table">
+      <thead><tr><th>Variable</th><th>Unit</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>sell_price[cp,i]</td><td>USD/kg</td><td>Crop product selling price per period</td></tr>
+        <tr><td>buy_price[cp,i]</td><td>USD/kg</td><td>Crop product buying price per period</td></tr>
+        <tr><td>N</td><td>—</td><td>Number of periods in the calendar</td></tr>
+      </tbody>
+    </table>
+
+    <h4>6.7 · Cash Flow</h4>
+    <div class="eq-box">
+cash_in[i]  = Σ<sub>cp</sub> sell_rev[cp,i]  +  nfi[i]
+cash_out[i] = input_cost[i]  +  hired_cost[i]  +  Σ<sub>cp</sub> buy_cost[cp,i]
+cash_net[i] = cash_in[i] − cash_out[i]
+
+cash_cum[i] = Σ<sub>j≤i</sub> cash_net[j]     <span class="eq-comment">// Cumulative balance at end of period i</span>
+end_cash    = cash_cum[N−1]               <span class="eq-comment">// Final annual cash balance</span>
+    </div>
+    <table class="var-table">
+      <thead><tr><th>Variable</th><th>Unit</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>nfi[i]</td><td>USD</td><td>Sum of all non-farm income sources for period i</td></tr>
+      </tbody>
+    </table>
+
+    <h4>6.8 · Gross Farm Margin (GFM)</h4>
+    <p>Total crop revenue minus all farm-related costs, excluding non-farm income:</p>
+    <div class="eq-box">
+GFM = Σ<sub>i</sub> sell_rev[i]  −  Σ<sub>i</sub> input_cost[i]  −  Σ<sub>i</sub> hired_cost[i]
+<span class="eq-comment">// sell_rev[i] = sum across all crop products for period i</span>
+    </div>
+
+    <h4>6.9 · Gross Margin per Cropping System (GFM_cs)</h4>
+    <p>Attribution of GFM to individual cropping systems, used in the Gross Margin by Cropping System chart:</p>
+    <div class="eq-box">
+share[row]   = area_ha[row] / Σ{same cs} area_ha
+vqp[cs,row]  = Σ<sub>cp</sub> sell_rev_total[cp] × share[row]
+inpC[cs,row] = Σ<sub>inp,i</sub> cost_ha[inp,i] × area_ha[row]
+labC[cs,row] = Σ<sub>task,i</sub> labour_ha[task,i] × area_ha[row] × hired_fraction[i] × hired_labour_price
+
+GFM_cs[cs]   = Σ<sub>rows with cs</sub> ( vqp − inpC − labC )
+<span class="eq-comment">// hired_fraction[i] = max(0, (demand[i]−supply[i]) / demand[i])</span>
+    </div>
+
+    <h4>6.10 · Household Income Aggregates</h4>
+    <div class="eq-box">
+GM      = GFM  +  Σ<sub>i</sub> nfi[i]         <span class="eq-comment">// Gross Margin = farm + non-farm</span>
+HHS     = Σ<sub>mt</sub> count[mt]              <span class="eq-comment">// Total household size</span>
+inc_pc  = GM / HHS                       <span class="eq-comment">// Income per capita</span>
+    </div>
+
+    <h4>6.11 · Resilience Classification</h4>
+    <div class="eq-box">
+food_secure  =  ∀ cp with hh_need[cp] > 0 :  balance[cp] ≥ 0
+econ_secure  =  end_cash ≥ 0
+
+resilience:
+  food_secure  AND econ_secure  →  "Secure"
+  food_secure  XOR econ_secure  →  "Fragile"
+  NOT food_secure AND NOT econ_secure  →  "Vulnerable"
+    </div>
+  </div>
+
+  <!-- 7. RESULTS -->
+  <div class="doc-section" id="doc-results">
+    <h3>7 · Reading Results</h3>
+    <h4>Resilience badges</h4>
+    <p><span class="tag-doc" style="background:#D4EDDA;color:#155724;">● Secure</span> Both food balance and end-year cash are non-negative.<br>
+    <span class="tag-doc" style="background:#FFF3CD;color:#856404;">● Fragile</span> One of the two is in deficit.<br>
+    <span class="tag-doc" style="background:#F8D7DA;color:#721c24;">● Vulnerable</span> Both food and cash are in deficit.</p>
+    <h4>KPI cards</h4>
+    <ul>
+      <li><strong>Gross Farm Margin</strong> — crop revenue minus input and hired labour costs</li>
+      <li><strong>Total HH Income</strong> — GFM plus all non-farm income</li>
+      <li><strong>Income / Capita</strong> — Total HH Income divided by household size</li>
+      <li><strong>End-Year Cash</strong> — cumulative cash balance after all periods; negative = deficit</li>
+      <li><strong>Hired Labour Cost</strong> — total hired labour expenditure across all periods</li>
+      <li><strong>Food Deficits</strong> — number of crop products where annual production &lt; household need</li>
+    </ul>
+    <h4>Cash Flow chart</h4>
+    <p>Bars show income and expenses per period. The line shows the cumulative cash balance. A line crossing below zero indicates a period where the household runs out of cash.</p>
+    <h4>Food balance section</h4>
+    <p>One chart per crop product that has either production or a consumption need. Shows production per period (bars) against an even split of annual need (line). The summary row shows total production, annual need, and the balance in kg.</p>
+    <h4>Labour table</h4>
+    <p>Shows household labour supply, total crop plan demand, resulting hired labour days, and hired labour cost for each period.</p>
+  </div>
+
+  <!-- 8. SCENARIOS -->
+  <div class="doc-section" id="doc-scenarios">
+    <h3>8 · Scenarios &amp; Comparison</h3>
+    <p>A scenario replaces the crop plan while keeping everything else (household composition, farm area, non-farm income) identical to the baseline. The same calculation engine runs on the scenario crop plan and produces a parallel set of results.</p>
+    <h4>Comparison table</h4>
+    <p>Shows baseline vs scenario for: GFM, Total HH Income, Income/Capita, End-Year Cash, Hired Labour Cost. The Change column is <span class="ok-inline">green</span> for improvements and <span class="warn-inline" style="color:var(--alert)">red</span> for deterioration.</p>
+    <h4>Comparison charts</h4>
+    <p>Two side-by-side charts for cash flow (cumulative) and gross margin by cropping system. Food balance charts show both baseline and scenario for each product.</p>
+    <p>The scenario is identified by its crop plan rows. To simulate agroecological intensification, define a more intensive cropping system in Parameters, then assign it in the scenario crop plan instead of the baseline system.</p>
+  </div>
+
+  <!-- 9. SESSIONS & EXPORT -->
+  <div class="doc-section" id="doc-sessions-export">
+    <h3>9 · Sessions &amp; Export</h3>
+    <p>Everything related to saving and sharing your work lives in the <strong>💾 Sessions &amp; Export</strong> tab.</p>
+
+    <h4>Saving a session</h4>
+    <p>Type a name in the Session Name field and click <strong>💾 Save to Browser</strong>. This creates a named snapshot of all projects and farms, visible in the Saved Sessions list below. You can save as many checkpoints as you like — e.g. one per field day.</p>
+
+    <h4>Downloading a session (.json)</h4>
+    <p>Click <strong>⬇ Download .json</strong> to save the current state as a file on your device. This is your real permanent backup. The file contains everything: all projects, all farms, all parameters, all results. Send it to a colleague and they can load it with <strong>⬆ Load from file</strong>.</p>
+
+    <h4>Exporting research data</h4>
+    <p>Scroll down to the <em>Export Farm Data for Research</em> section. The status panel shows which farms in the active project have results calculated (green ✓) and which are still pending. Run the analysis in 📋 Data Entry for any pending farms before exporting.</p>
+    <p>Click <strong>⬇ Download CSV</strong> to get a flat file ready for Excel, R, or Python. The CSV includes one row per farm with the following columns:</p>
+    <ul>
+      <li>Farm identification: ID, name, village, project name</li>
+      <li>Household composition: total size + one column per member type</li>
+      <li>Farm area and cropped area</li>
+      <li>Cropping systems used (name:area pairs)</li>
+      <li>Income indicators: GFM, total income, income per capita, end-year cash</li>
+      <li>Labour: total demand, total hired days, total hired cost</li>
+      <li>Food balance per crop product: production, need, balance, purchases (kg)</li>
+      <li>Cash flow per period: income, expenses, cumulative balance</li>
+      <li>Resilience status: food secure, econ secure, overall resilience</li>
+    </ul>
+    <p>Click <strong>⬇ Download JSON</strong> for a structured export of the same data — useful for programmatic analysis or database import. This file is <em>not</em> designed to be reloaded into the tool (use a session .json for that).</p>
+  </div>
+
+  <!-- 10. CONSTRAINTS -->
+  <div class="doc-section" id="doc-constraints">
+    <h3>10 · Constraints &amp; Validation</h3>
+    <p>The tool checks the following before allowing an analysis to run. <span class="warn-inline" style="color:var(--alert);">Red errors</span> block the run.</p>
+    <table class="var-table">
+      <thead><tr><th>Check</th><th>Rule</th><th>How to fix</th></tr></thead>
+      <tbody>
+        <tr><td>Land constraint</td><td>Sum of crop plan areas ≤ farm area</td><td>Reduce plot areas or increase farm area</td></tr>
+        <tr><td>Empty crop plan</td><td>At least one row required</td><td>Add a cropping system in Data Entry</td></tr>
+        <tr><td>Missing CS</td><td>Every crop plan row must have a system selected</td><td>Select a cropping system in the dropdown</td></tr>
+        <tr><td>Calendar</td><td>Period days must sum to 365</td><td>Fix in ⚙ Parameters → Calendar</td></tr>
+      </tbody>
+    </table>
+    <p>Labour over-demand is not an error — it simply means hired labour will be needed and is included in the cost calculations.</p>
+  </div>
+
+  <!-- 11. ANDROID -->
+  <div class="doc-section" id="doc-android">
+    <h3>11 · Using on Tablet / Phone (Android)</h3>
+    <p>The tool is designed to work on Android devices in any modern browser (Chrome, Firefox, Edge). Here is how to set it up for field use:</p>
+    <h4>Option A — Local file (offline, no internet needed)</h4>
+    <ul>
+      <li>Copy the <span class="tag-doc">.html</span> file to the device (USB cable, Bluetooth, or download via a shared link once)</li>
+      <li>Open a file manager app, navigate to the file, and tap it — it opens in the browser</li>
+      <li>Bookmark it for easy access next time</li>
+      <li>⚠ localStorage is tied to the file path. If you move the file, you start fresh. Keep it in a fixed folder.</li>
+    </ul>
+    <h4>Option B — Shared drive (requires internet on first open, then cached)</h4>
+    <ul>
+      <li>Upload the file to Google Drive or a shared server</li>
+      <li>Open the shared link in Chrome on the device</li>
+      <li>In Chrome, tap the menu → "Add to Home Screen" to create an app-like icon</li>
+    </ul>
+    <h4>Tips for touch use</h4>
+    <ul>
+      <li>Buttons and input fields are sized for finger tapping (minimum 34px height)</li>
+      <li>Use landscape orientation on phones for tables and charts</li>
+      <li>The navigation bar scrolls horizontally — swipe left to see all tabs</li>
+      <li>Download sessions via the ⬇ button — files land in the device's Downloads folder</li>
+      <li>Load sessions by tapping ⬆ Load from file and selecting from Downloads</li>
+    </ul>
+  </div>
+
+</div><!-- end page-docs -->
+<script id="js-state">
+let projects     = {};
+let activeProjId = null;
+let sessions     = {};
+let _charts      = {};
+let _uid         = 0;
+
+function uid(pfx){ return pfx+'_'+(++_uid)+'_'+Date.now(); }
+
+function activeProj(){
+  if(!activeProjId || !projects[activeProjId]) return null;
+  return projects[activeProjId];
+}
+
+function requireProj(){
+  const p = activeProj();
+  if(!p){ alert('No active project. Please select or create one in 📁 Projects.'); return null; }
+  return p;
+}
+
+function autosave(){
+  try{
+    localStorage.setItem('raiz_v3_projects', JSON.stringify(projects));
+    localStorage.setItem('raiz_v3_active',   activeProjId||'');
+  }catch(e){}
+  // Update header timestamp
+  const el = document.getElementById('save-ts');
+  if(el){
+    const now = new Date();
+    const hm  = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+    el.textContent = '💾 '+hm;
+    el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'), 1500);
+  }
+}
+
+function loadAutosave(){
+  try{
+    const p = localStorage.getItem('raiz_v3_projects');
+    const a = localStorage.getItem('raiz_v3_active');
+    if(p) projects = JSON.parse(p);
+    if(a && projects[a]) activeProjId = a;
+  }catch(e){}
+}
+
+function persistSessions(){
+  try{ localStorage.setItem('raiz_v3_sessions', JSON.stringify(sessions)); }catch(e){}
+}
+function loadSessions(){
+  try{ const s=localStorage.getItem('raiz_v3_sessions'); if(s) sessions=JSON.parse(s); }catch(e){}
+}
+</script>
+
+
+<!-- ============================================================
+     JS: NAVIGATION
+     ============================================================ -->
+<script id="js-nav">
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav.main-nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id)?.classList.add('active');
+  document.getElementById('nav-'+id)?.classList.add('active');
+
+  const subNav = document.getElementById('sub-nav');
+  if(id==='params'){
+    subNav.classList.add('visible');
+    showPanel('info');
+  } else {
+    subNav.classList.remove('visible');
+  }
+  if(id==='sessions') onSessionsPageOpen();
+  if(id==='farms')    renderFarmList();
+  if(id==='projects') renderProjectList();
+  // docs needs no special init
+}
+
+function showPanel(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav.sub-nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id)?.classList.add('active');
+  document.getElementById('sub-'+id)?.classList.add('active');
+
+  const p = activeProj();
+  const noProj   = document.getElementById('params-no-proj');
+  const infoCard = document.getElementById('proj-info-card');
+  if(noProj)   noProj.style.display   = p ? 'none'  : 'block';
+  if(infoCard) infoCard.style.display = p ? 'block' : 'none';
+
+  if(id==='info'    && p){ document.getElementById('pi-name').value=p.name||''; document.getElementById('pi-desc').value=p.description||''; }
+  if(id==='cal'     && p){ renderCalendar(); }
+  if(id==='crops'   && p){ renderCropProducts(); }
+  if(id==='members' && p){ renderMemberTypes(); }
+  if(id==='labour'  && p){ document.getElementById('lab-price').value=p.hired_labour_price||5; }
+  if(id==='cs'      && p){ renderCroppingSystems(); }
+}
+
+function updatePill(){
+  const p  = activeProj();
+  const el = document.getElementById('proj-pill');
+  if(p && p.name){ el.textContent='⚙ '+p.name; el.style.display='block'; }
+  else el.style.display='none';
+}
+</script>
+
+
+<!-- ============================================================
+     JS: SESSIONS
+     ============================================================ -->
+<script id="js-sessions">
+function saveSession(){
+  const name = document.getElementById('sess-name').value.trim();
+  if(!name){ alert('Please enter a session name.'); return; }
+  sessions[name] = {
+    name, saved_at: new Date().toISOString(),
+    projects: JSON.parse(JSON.stringify(projects)),
+    activeProjId
+  };
+  persistSessions();
+  renderSessions();
+  document.getElementById('sess-name').value='';
+}
+
+function loadSession(name){
+  const s = sessions[name]; if(!s) return;
+  projects     = JSON.parse(JSON.stringify(s.projects||{}));
+  activeProjId = s.activeProjId||null;
+  autosave();
+  updatePill();
+  renderProjectList();
+  renderFarmList();
+  renderSessions();
+  showPage('projects');
+}
+
+function deleteSession(name){
+  if(!confirm(`Delete session "${name}"?`)) return;
+  delete sessions[name];
+  persistSessions();
+  renderSessions();
+}
+
+function downloadSession(){
+  const name = document.getElementById('sess-name').value.trim() || 'raiz_'+new Date().toISOString().slice(0,10);
+  _download(JSON.stringify({name, saved_at:new Date().toISOString(), projects, activeProjId},null,2), name+'.json','application/json');
+}
+
+function downloadNamedSession(name){
+  const s=sessions[name]; if(!s) return;
+  _download(JSON.stringify(s,null,2), name+'.json','application/json');
+}
+
+function loadFromFile(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!data.projects) throw new Error('Invalid session file — missing projects.');
+      projects=data.projects; activeProjId=data.activeProjId||null;
+      autosave(); updatePill(); renderProjectList(); renderFarmList();
+      showPage('projects'); alert('Session loaded ✓');
+    }catch(err){ alert('Could not load: '+err.message); }
+  };
+  reader.readAsText(file); e.target.value='';
+}
+
+function renderSessions(){
+  const el=document.getElementById('sess-list'); if(!el) return;
+  const keys=Object.keys(sessions);
+  if(!keys.length){ el.innerHTML='<div class="muted">No sessions saved yet.</div>'; return; }
+  el.innerHTML=keys.map(k=>{
+    const s=sessions[k];
+    const dt=new Date(s.saved_at).toLocaleString();
+    const np=Object.keys(s.projects||{}).length;
+    return `<div class="sess-item">
+      <div>
+        <div style="font-weight:600;">${_esc(s.name)}</div>
+        <div class="muted mono" style="font-size:.73rem;">${dt} · ${np} project(s)</div>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="loadSession('${_esc(k)}')">Load</button>
+        <button class="btn btn-ghost  btn-sm" onclick="downloadNamedSession('${_esc(k)}')">⬇</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSession('${_esc(k)}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+</script>
+
+
+<!-- ============================================================
+     JS: PROJECTS
+     ============================================================ -->
+<script id="js-projects">
+function _emptyProject(id, name, desc){
+  return { id, name, description:desc||'', hired_labour_price:5,
+    periods:[], crop_products:[], member_types:[], cropping_systems:[],
+    farms:{} };
+}
+
+function createProject(){
+  const name=document.getElementById('new-proj-name').value.trim();
+  const desc=document.getElementById('new-proj-desc').value.trim();
+  if(!name){ alert('Please enter a project name.'); return; }
+  const id=uid('PROJ');
+  projects[id]=_emptyProject(id,name,desc);
+  setActiveProject(id);
+  document.getElementById('new-proj-name').value='';
+  document.getElementById('new-proj-desc').value='';
+  autosave(); renderProjectList();
+}
+
+function setActiveProject(id){
+  activeProjId=id; autosave(); updatePill();
+  renderProjectList(); renderFarmList();
+}
+
+function deleteProject(id){
+  const p=projects[id];
+  if(!confirm(`Delete project "${p?.name||id}" and all its farms?`)) return;
+  delete projects[id];
+  if(activeProjId===id) activeProjId=null;
+  autosave(); updatePill(); renderProjectList(); renderFarmList();
+}
+
+function renderProjectList(){
+  const el=document.getElementById('proj-list'); if(!el) return;
+  const keys=Object.keys(projects);
+  if(!keys.length){ el.innerHTML='<div class="muted">No projects yet. Create one above.</div>'; return; }
+  el.innerHTML=keys.map(id=>{
+    const p=projects[id];
+    const fc=Object.keys(p.farms||{}).length;
+    const isAct=activeProjId===id;
+    return `<div class="proj-item${isAct?' act':''}" onclick="setActiveProject('${id}');showPage('params')">
+      <div>
+        <div style="font-weight:600;">${_esc(p.name)}${isAct?' <span class="tag tag-green">active</span>':''}</div>
+        <div class="muted mono" style="font-size:.73rem;">${_esc(p.description||'—')} · ${fc} farm(s) · ${p.periods.length} period(s)</div>
+      </div>
+      <div style="display:flex;gap:.4rem;">
+        <button class="btn btn-earth  btn-sm" onclick="event.stopPropagation();setActiveProject('${id}');showPage('params')">⚙ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteProject('${id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+</script>
+
+
+<!-- ============================================================
+     JS: PARAMETERS — CALENDAR
+     ============================================================ -->
+<script id="js-calendar">
+function addPeriod(data){
+  const p=requireProj(); if(!p) return;
+  p.periods.push({ id:uid('PER'), name:data?.name||'', days:data?.days||0, description:data?.description||'' });
+  autosave(); renderCalendar();
+}
+
+function removePeriod(id){
+  const p=requireProj(); if(!p) return;
+  p.periods=p.periods.filter(x=>x.id!==id);
+  autosave(); renderCalendar();
+  renderCropProducts(); renderMemberTypes(); renderCroppingSystems();
+}
+
+function renderCalendar(){
+  const p=requireProj(); if(!p) return;
+  const tbody=document.getElementById('cal-tbody'); if(!tbody) return;
+  tbody.innerHTML=p.periods.map((per,i)=>`
+    <tr>
+      <td class="mono">${i+1}</td>
+      <td><input type="text"   value="${_esc(per.name)}"        placeholder="P${i+1}"
+          oninput="activeProj().periods[${i}].name=this.value; updateCalTotal(); autosave()"></td>
+      <td><input type="number" value="${per.days}" min="1" max="365" style="width:68px"
+          oninput="activeProj().periods[${i}].days=parseInt(this.value)||0; updateCalTotal(); autosave()"></td>
+      <td><input type="text"   value="${_esc(per.description)}" placeholder="Short description"
+          oninput="activeProj().periods[${i}].description=this.value; autosave()"></td>
+      <td><button class="btn btn-danger btn-sm" onclick="removePeriod('${per.id}')">✕</button></td>
+    </tr>`).join('');
+  updateCalTotal();
+}
+
+function updateCalTotal(){
+  const p=activeProj(); if(!p) return;
+  const total=p.periods.reduce((s,per)=>s+(parseInt(per.days)||0),0);
+  const el=document.getElementById('cal-total');
+  const color=total===365?'var(--ok)':total>365?'var(--alert)':'var(--warn)';
+  if(el) el.innerHTML=`Total: <strong style="color:${color}">${total}</strong> / 365 days`;
+}
+
+function saveCalendar(){
+  const p=requireProj(); if(!p) return;
+  const total=p.periods.reduce((s,per)=>s+(parseInt(per.days)||0),0);
+  if(!p.periods.length){ alert('Add at least one period.'); return; }
+  if(total!==365){ alert(`Calendar total is ${total} days — must be exactly 365.`); return; }
+  autosave(); alert('Calendar saved ✓');
+}
+</script>
+
+
+<!-- ============================================================
+     JS: PARAMETERS — CROP PRODUCTS
+     ============================================================ -->
+<script id="js-crop-products">
+function addCropProduct(data){
+  const p=requireProj(); if(!p) return;
+  const N=Math.max(p.periods.length,1);
+  p.crop_products.push({ id:uid('CP'), name:data?.name||'',
+    sell_price:data?.sell_price||Array(N).fill(0),
+    buy_price: data?.buy_price ||Array(N).fill(0) });
+  autosave(); renderCropProducts();
+}
+
+function removeCropProduct(id){
+  const p=requireProj(); if(!p) return;
+  p.crop_products=p.crop_products.filter(c=>c.id!==id);
+  autosave(); renderCropProducts();
+}
+
+function renderCropProducts(){
+  const p=requireProj(); if(!p) return;
+  const el=document.getElementById('cp-list'); if(!el) return;
+  const periods=p.periods.length?p.periods:[{name:'P1'}];
+  el.innerHTML=p.crop_products.map((cp,ci)=>{
+    const sellCols=periods.map((per,pi)=>`<div class="fg"><label>${_esc(per.name||'P'+(pi+1))} <em>sell $/kg</em></label><input type="number" step="0.01" min="0" value="${cp.sell_price[pi]||0}" oninput="activeProj().crop_products[${ci}].sell_price[${pi}]=parseFloat(this.value)||0; autosave()"></div>`).join('');
+    const buyCols =periods.map((per,pi)=>`<div class="fg"><label>${_esc(per.name||'P'+(pi+1))} <em>buy $/kg</em></label><input type="number" step="0.01" min="0" value="${cp.buy_price[pi]||0}"  oninput="activeProj().crop_products[${ci}].buy_price[${pi}]=parseFloat(this.value)||0; autosave()"></div>`).join('');
+    return `<div class="card-inner" style="margin-bottom:.8rem;">
+      <div class="row-between" style="margin-bottom:.7rem;">
+        <div class="fg" style="flex:1;max-width:280px;"><label>Product Name</label>
+          <input type="text" value="${_esc(cp.name)}" placeholder="e.g. Maize grain"
+            oninput="activeProj().crop_products[${ci}].name=this.value; autosave()">
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="removeCropProduct('${cp.id}')">✕ Remove</button>
+      </div>
+      <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem;">Selling Price</div>
+      <div class="fgrid">${sellCols}</div>
+      <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:.6rem 0 .3rem;">Buying Price</div>
+      <div class="fgrid">${buyCols}</div>
+    </div>`;
+  }).join('');
+}
+</script>
+
+
+<!-- ============================================================
+     JS: PARAMETERS — MEMBER TYPES
+     ============================================================ -->
+<script id="js-member-types">
+function addMemberType(data){
+  const p=requireProj(); if(!p) return;
+  p.member_types.push({ id:uid('MT'), name:data?.name||'', description:data?.description||'',
+    labour_days:data?.labour_days||200, consumption:[] });
+  autosave(); renderMemberTypes();
+}
+
+function removeMemberType(id){
+  const p=requireProj(); if(!p) return;
+  p.member_types=p.member_types.filter(m=>m.id!==id);
+  autosave(); renderMemberTypes();
+}
+
+function addConsumption(mt_id){
+  const p=requireProj(); if(!p) return;
+  const mt=p.member_types.find(m=>m.id===mt_id); if(!mt) return;
+  mt.consumption.push({cp_id:'',kg_year:0});
+  autosave(); renderMemberTypes();
+}
+
+function removeConsumption(mt_id,ci){
+  const p=requireProj(); if(!p) return;
+  const mt=p.member_types.find(m=>m.id===mt_id); if(!mt) return;
+  mt.consumption.splice(ci,1); autosave(); renderMemberTypes();
+}
+
+function renderMemberTypes(){
+  const p=requireProj(); if(!p) return;
+  const el=document.getElementById('mt-list'); if(!el) return;
+  const cpOpts=p.crop_products.map(cp=>`<option value="${cp.id}">${_esc(cp.name||cp.id)}</option>`).join('');
+  el.innerHTML=p.member_types.map((mt,mi)=>{
+    const consRows=mt.consumption.map((c,ci)=>`
+      <div style="display:flex;gap:.5rem;align-items:flex-end;margin-bottom:.4rem;">
+        <div class="fg" style="flex:2"><label>Crop Product</label>
+          <select onchange="activeProj().member_types[${mi}].consumption[${ci}].cp_id=this.value; autosave()">
+            <option value="">— select —</option>
+            ${cpOpts.replace(`value="${c.cp_id}"`,`value="${c.cp_id}" selected`)}
+          </select>
+        </div>
+        <div class="fg" style="flex:1"><label>kg / year</label>
+          <input type="number" min="0" value="${c.kg_year}"
+            oninput="activeProj().member_types[${mi}].consumption[${ci}].kg_year=parseFloat(this.value)||0; autosave()">
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="removeConsumption('${mt.id}',${ci})">✕</button>
+      </div>`).join('');
+    return `<div class="card-inner" style="margin-bottom:.8rem;">
+      <div class="row-between" style="margin-bottom:.7rem;">
+        <div class="fgrid-3" style="flex:1;max-width:560px;">
+          <div class="fg"><label>Name</label><input type="text" value="${_esc(mt.name)}" placeholder="e.g. Adult male" oninput="activeProj().member_types[${mi}].name=this.value; autosave()"></div>
+          <div class="fg"><label>Description</label><input type="text" value="${_esc(mt.description)}" oninput="activeProj().member_types[${mi}].description=this.value; autosave()"></div>
+          <div class="fg"><label>Labour <em>[days/year]</em></label><input type="number" min="0" value="${mt.labour_days}" oninput="activeProj().member_types[${mi}].labour_days=parseFloat(this.value)||0; autosave()"></div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="removeMemberType('${mt.id}')">✕ Remove</button>
+      </div>
+      <h4>🍽 Consumption Needs</h4>
+      ${consRows}
+      <button class="btn btn-ghost btn-sm" onclick="addConsumption('${mt.id}')">+ Add Consumption Need</button>
+    </div>`;
+  }).join('');
+}
+</script>
+
+
+<!-- ============================================================
+     JS: PARAMETERS — CROPPING SYSTEMS
+     ============================================================ -->
+<script id="js-cropping-systems">
+function addCroppingSystem(data){
+  const p=requireProj(); if(!p) return;
+  p.cropping_systems.push({ id:uid('CS'), name:data?.name||'', description:data?.description||'',
+    outputs:[], tasks:[], inputs:[] });
+  autosave(); renderCroppingSystems();
+}
+
+function removeCroppingSystem(id){
+  const p=requireProj(); if(!p) return;
+  p.cropping_systems=p.cropping_systems.filter(c=>c.id!==id);
+  autosave(); renderCroppingSystems();
+}
+
+function _cs(id){ return activeProj()?.cropping_systems.find(c=>c.id===id); }
+function _csi(id){ return activeProj()?.cropping_systems.findIndex(c=>c.id===id); }
+
+function addCSOutput(cs_id){
+  const p=requireProj();if(!p)return;
+  _cs(cs_id)?.outputs.push({cp_id:'',yield_ha:Array(Math.max(p.periods.length,1)).fill(0)});
+  autosave();renderCroppingSystems();
+}
+function rmCSOutput(cs_id,i){ _cs(cs_id)?.outputs.splice(i,1); autosave();renderCroppingSystems(); }
+
+function addCSTask(cs_id){
+  const p=requireProj();if(!p)return;
+  _cs(cs_id)?.tasks.push({name:'',description:'',labour_ha:Array(Math.max(p.periods.length,1)).fill(0)});
+  autosave();renderCroppingSystems();
+}
+function rmCSTask(cs_id,i){ _cs(cs_id)?.tasks.splice(i,1); autosave();renderCroppingSystems(); }
+
+function addCSInput(cs_id){
+  const p=requireProj();if(!p)return;
+  _cs(cs_id)?.inputs.push({name:'',description:'',cost_ha:Array(Math.max(p.periods.length,1)).fill(0)});
+  autosave();renderCroppingSystems();
+}
+function rmCSInput(cs_id,i){ _cs(cs_id)?.inputs.splice(i,1); autosave();renderCroppingSystems(); }
+
+function renderCroppingSystems(){
+  const p=requireProj(); if(!p) return;
+  const el=document.getElementById('cs-list'); if(!el) return;
+  const periods=p.periods.length?p.periods:[{name:'P1'}];
+  const cpOpts=p.crop_products.map(cp=>`<option value="${cp.id}">${_esc(cp.name||cp.id)}</option>`).join('');
+  const pHdr=periods.map(per=>`<th>${_esc(per.name||'P')}</th>`).join('');
+
+  el.innerHTML=p.cropping_systems.map((cs,csi)=>{
+    // Outputs
+    const outRows=cs.outputs.map((o,oi)=>
+      `<tr><td><select onchange="activeProj().cropping_systems[${csi}].outputs[${oi}].cp_id=this.value; autosave()">
+        <option value="">— select —</option>${cpOpts.replace(`value="${o.cp_id}"`,`value="${o.cp_id}" selected`)}
+       </select></td>`+
+      periods.map((per,pi)=>`<td><input type="number" min="0" step="0.1" value="${o.yield_ha[pi]||0}" style="width:70px"
+        oninput="activeProj().cropping_systems[${csi}].outputs[${oi}].yield_ha[${pi}]=parseFloat(this.value)||0; autosave()"></td>`).join('')+
+      `<td><button class="btn btn-danger btn-sm" onclick="rmCSOutput('${cs.id}',${oi})">✕</button></td></tr>`
+    ).join('');
+
+    // Tasks
+    const taskRows=cs.tasks.map((t,ti)=>
+      `<tr><td><input type="text" value="${_esc(t.name)}" placeholder="Task name"
+        oninput="activeProj().cropping_systems[${csi}].tasks[${ti}].name=this.value; autosave()"></td>
+       <td><input type="text" value="${_esc(t.description)}" placeholder="Description"
+        oninput="activeProj().cropping_systems[${csi}].tasks[${ti}].description=this.value; autosave()"></td>`+
+      periods.map((per,pi)=>`<td><input type="number" min="0" step="0.1" value="${t.labour_ha[pi]||0}" style="width:70px"
+        oninput="activeProj().cropping_systems[${csi}].tasks[${ti}].labour_ha[${pi}]=parseFloat(this.value)||0; autosave()"></td>`).join('')+
+      `<td><button class="btn btn-danger btn-sm" onclick="rmCSTask('${cs.id}',${ti})">✕</button></td></tr>`
+    ).join('');
+
+    // Inputs
+    const inpRows=cs.inputs.map((inp,ii)=>
+      `<tr><td><input type="text" value="${_esc(inp.name)}" placeholder="Input name"
+        oninput="activeProj().cropping_systems[${csi}].inputs[${ii}].name=this.value; autosave()"></td>
+       <td><input type="text" value="${_esc(inp.description)}" placeholder="Description"
+        oninput="activeProj().cropping_systems[${csi}].inputs[${ii}].description=this.value; autosave()"></td>`+
+      periods.map((per,pi)=>`<td><input type="number" min="0" step="0.1" value="${inp.cost_ha[pi]||0}" style="width:70px"
+        oninput="activeProj().cropping_systems[${csi}].inputs[${ii}].cost_ha[${pi}]=parseFloat(this.value)||0; autosave()"></td>`).join('')+
+      `<td><button class="btn btn-danger btn-sm" onclick="rmCSInput('${cs.id}',${ii})">✕</button></td></tr>`
+    ).join('');
+
+    return `<div class="card" style="margin-bottom:1rem;">
+      <div class="row-between" style="margin-bottom:.8rem;">
+        <div class="fgrid-2" style="flex:1;max-width:480px;">
+          <div class="fg"><label>Name</label><input type="text" value="${_esc(cs.name)}" placeholder="e.g. Maize Ext."
+            oninput="activeProj().cropping_systems[${csi}].name=this.value; autosave()"></div>
+          <div class="fg"><label>Description</label><input type="text" value="${_esc(cs.description)}"
+            oninput="activeProj().cropping_systems[${csi}].description=this.value; autosave()"></div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="removeCroppingSystem('${cs.id}')">✕ Remove</button>
+      </div>
+
+      <div class="acc-hdr" onclick="toggleAcc('out-${cs.id}',this)">
+        <span>🌾 Outputs <span class="tag">${cs.outputs.length}</span>
+          <span style="font-size:.7rem;color:var(--muted);font-weight:400;"> — kg / ha / period</span></span>
+        <span class="acc-arr">▶</span>
+      </div>
+      <div class="acc-body card-inner green" id="out-${cs.id}">
+        ${cs.outputs.length?`<table class="tbl"><thead><tr><th>Crop Product</th>${pHdr}<th></th></tr></thead><tbody>${outRows}</tbody></table>`:'<div class="muted" style="font-size:.8rem;padding:.3rem 0;">No outputs yet.</div>'}
+        <button class="btn btn-ghost btn-sm" style="margin-top:.5rem;" onclick="addCSOutput('${cs.id}')">+ Add Output</button>
+      </div>
+
+      <div class="acc-hdr" style="margin-top:.3rem;" onclick="toggleAcc('task-${cs.id}',this)">
+        <span>👷 Labour Tasks <span class="tag">${cs.tasks.length}</span>
+          <span style="font-size:.7rem;color:var(--muted);font-weight:400;"> — days / ha / period</span></span>
+        <span class="acc-arr">▶</span>
+      </div>
+      <div class="acc-body card-inner brown" id="task-${cs.id}">
+        ${cs.tasks.length?`<table class="tbl"><thead><tr><th>Task</th><th>Description</th>${pHdr}<th></th></tr></thead><tbody>${taskRows}</tbody></table>`:'<div class="muted" style="font-size:.8rem;padding:.3rem 0;">No tasks yet.</div>'}
+        <button class="btn btn-ghost btn-sm" style="margin-top:.5rem;" onclick="addCSTask('${cs.id}')">+ Add Task</button>
+      </div>
+
+      <div class="acc-hdr" style="margin-top:.3rem;" onclick="toggleAcc('inp-${cs.id}',this)">
+        <span>🧪 Inputs <span class="tag">${cs.inputs.length}</span>
+          <span style="font-size:.7rem;color:var(--muted);font-weight:400;"> — USD / ha / period</span></span>
+        <span class="acc-arr">▶</span>
+      </div>
+      <div class="acc-body card-inner amber" id="inp-${cs.id}">
+        ${cs.inputs.length?`<table class="tbl"><thead><tr><th>Input</th><th>Description</th>${pHdr}<th></th></tr></thead><tbody>${inpRows}</tbody></table>`:'<div class="muted" style="font-size:.8rem;padding:.3rem 0;">No inputs yet.</div>'}
+        <button class="btn btn-ghost btn-sm" style="margin-top:.5rem;" onclick="addCSInput('${cs.id}')">+ Add Input</button>
+      </div>
+    </div>`;
+  }).join('');
+  _restoreAccState();
+}
+
+// Persists which accordion panels are open across re-renders.
+// Key = accordion body id (e.g. "out-CS_1_...", "task-CS_1_...", "inp-CS_1_...")
+const _accOpen = {};
+
+function toggleAcc(id, hdr){
+  const body = document.getElementById(id); if(!body) return;
+  const nowOpen = !body.classList.contains('open');
+  body.classList.toggle('open');
+  hdr.querySelector('.acc-arr').classList.toggle('open');
+  _accOpen[id] = nowOpen;   // remember the choice
+}
+
+// Call after renderCroppingSystems() rebuilds the DOM to reapply open states.
+function _restoreAccState(){
+  Object.entries(_accOpen).forEach(([id, open]) => {
+    const body = document.getElementById(id); if(!body) return;
+    if(open){
+      body.classList.add('open');
+      // Also rotate the arrow on the sibling header
+      const hdr = body.previousElementSibling;
+      if(hdr) hdr.querySelector('.acc-arr')?.classList.add('open');
+    }
+  });
+}
+</script>
+
+
+<!-- ============================================================
+     JS: FARMS
+     ============================================================ -->
+<script id="js-farms">
+let selectedFarmId=null;
+
+function createFarm(){
+  const p=requireProj(); if(!p) return;
+  const id  =document.getElementById('new-farm-id').value.trim();
+  const name=document.getElementById('new-farm-name').value.trim();
+  const vill=document.getElementById('new-farm-village').value.trim();
+  if(!id||!name){ alert('Farm ID and name are required.'); return; }
+  if(p.farms[id]){ alert('A farm with this ID already exists in this project.'); return; }
+  p.farms[id]={ id, name, village:vill,
+    composition:Object.fromEntries(p.member_types.map(m=>[m.id,0])),
+    area:2.0, nfi:[], crop_plan:[], results:null };
+  autosave(); selectFarm(id); renderFarmList();
+  document.getElementById('new-farm-id').value='';
+  document.getElementById('new-farm-name').value='';
+  document.getElementById('new-farm-village').value='';
+}
+
+function selectFarm(id){
+  const p=requireProj(); if(!p||!p.farms[id]) return;
+  selectedFarmId=id; loadEntryForm(); renderFarmList();
+  document.getElementById('entry-farm-lbl').textContent=`${p.farms[id].name} (${id}) — ${p.name}`;
+  document.getElementById('res-farm-lbl').textContent=`${p.farms[id].name} (${id})`;
+}
+
+function deleteFarm(id){
+  const p=requireProj(); if(!p) return;
+  if(!confirm(`Delete farm "${id}"?`)) return;
+  delete p.farms[id];
+  if(selectedFarmId===id) selectedFarmId=null;
+  autosave(); renderFarmList();
+}
+
+function renderFarmList(){
+  const warn=document.getElementById('farms-warn');
+  const card=document.getElementById('farm-create-card');
+  const list=document.getElementById('farm-list');
+  const p=activeProj();
+  if(!p){
+    if(warn) warn.style.display='block';
+    if(card) card.style.display='none';
+    if(list) list.innerHTML=''; return;
+  }
+  if(warn) warn.style.display='none';
+  if(card) card.style.display='block';
+  if(!list) return;
+  const keys=Object.keys(p.farms||{});
+  if(!keys.length){ list.innerHTML='<div class="muted">No profiles yet.</div>'; return; }
+  list.innerHTML=keys.map(id=>{
+    const f=p.farms[id]; const sel=selectedFarmId===id;
+    const used=(f.crop_plan||[]).reduce((s,r)=>s+(r.area_ha||0),0);
+    return `<div style="background:${sel?'#F0F7F3':''};border:1px solid ${sel?'var(--leaf)':'var(--border)'};border-radius:8px;padding:.72rem 1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;cursor:pointer;" onclick="selectFarm('${id}')">
+      <div>
+        <div style="font-weight:600;">${_esc(f.name)} <span class="tag">${_esc(id)}</span></div>
+        <div class="muted mono" style="font-size:.72rem;">${_esc(f.village||'—')} · ${f.area||0} ha · ${used.toFixed(1)} ha cropped</div>
+      </div>
+      <div style="display:flex;gap:.35rem;">
+        <button class="btn btn-earth  btn-sm" onclick="event.stopPropagation();selectFarm('${id}');showPage('entry')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteFarm('${id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+</script>
+
+
+<!-- ============================================================
+     JS: DATA ENTRY
+     ============================================================ -->
+<script id="js-entry">
+function _farm(){ const p=activeProj(); if(!p||!selectedFarmId) return null; return p.farms[selectedFarmId]||null; }
+
+function loadEntryForm(){
+  const p=activeProj(); const f=_farm(); if(!p||!f) return;
+
+  // HH composition
+  const compEl=document.getElementById('hh-comp');
+  if(compEl){
+    if(!p.member_types.length){ compEl.innerHTML='<div class="muted">No member types defined yet.</div>'; }
+    else compEl.innerHTML=p.member_types.map(mt=>`
+      <div class="fg">
+        <label>${_esc(mt.name||mt.id)} <em>[persons]</em></label>
+        <input type="number" min="0" value="${f.composition[mt.id]||0}"
+          oninput="_farm().composition['${mt.id}']=parseInt(this.value)||0; autosave()">
+      </div>`).join('');
+  }
+  document.getElementById('farm-area').value=f.area||2.0;
+  renderNFI(); renderCropPlan(); updateLandBar();
+}
+
+function onAreaChange(){
+  const f=_farm(); if(!f) return;
+  f.area=parseFloat(document.getElementById('farm-area').value)||0;
+  autosave(); updateLandBar();
+}
+
+function addNFI(){
+  const f=_farm(); if(!f) return;
+  const N=Math.max(activeProj()?.periods.length||1,1);
+  f.nfi.push({name:'',amount:Array(N).fill(0)});
+  autosave(); renderNFI();
+}
+function removeNFI(i){ const f=_farm();if(!f)return; f.nfi.splice(i,1); autosave(); renderNFI(); }
+
+function renderNFI(){
+  const p=activeProj(); const f=_farm();
+  const el=document.getElementById('nfi-list'); if(!el) return;
+  if(!f||!p){ el.innerHTML=''; return; }
+  const periods=p.periods.length?p.periods:[{name:'P1'}];
+  el.innerHTML=(f.nfi||[]).map((n,ni)=>{
+    const cols=periods.map((per,pi)=>`<div class="fg"><label>${_esc(per.name||'P'+(pi+1))} <em>[$]</em></label>
+      <input type="number" min="0" step="0.5" value="${n.amount[pi]||0}"
+        oninput="_farm().nfi[${ni}].amount[${pi}]=parseFloat(this.value)||0; autosave()"></div>`).join('');
+    return `<div class="card-inner" style="margin-bottom:.6rem;">
+      <div style="display:flex;gap:.5rem;align-items:flex-end;margin-bottom:.5rem;">
+        <div class="fg" style="flex:2"><label>Source Name</label>
+          <input type="text" value="${_esc(n.name)}" placeholder="e.g. Off-farm wages"
+            oninput="_farm().nfi[${ni}].name=this.value; autosave()">
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="removeNFI(${ni})">✕</button>
+      </div>
+      <div class="fgrid">${cols}</div>
+    </div>`;
+  }).join('');
+}
+
+function addCropRow(data){
+  const f=_farm(); if(!f) return;
+  f.crop_plan.push({cs_id:data?.cs_id||'',area_ha:data?.area_ha||0});
+  autosave(); renderCropPlan(); updateLandBar();
+}
+function removeCropRow(i){ const f=_farm();if(!f)return; f.crop_plan.splice(i,1); autosave(); renderCropPlan(); updateLandBar(); }
+
+function renderCropPlan(){
+  const p=activeProj(); const f=_farm();
+  const tbody=document.getElementById('cp-tbody'); if(!tbody) return;
+  if(!f||!p){ tbody.innerHTML=''; return; }
+  const csOpts=(p.cropping_systems||[]).map(cs=>`<option value="${cs.id}">${_esc(cs.name||cs.id)}</option>`).join('');
+  tbody.innerHTML=(f.crop_plan||[]).map((row,i)=>`
+    <tr>
+      <td><select onchange="_farm().crop_plan[${i}].cs_id=this.value; autosave()">
+        <option value="">— select —</option>
+        ${csOpts.replace(`value="${row.cs_id}"`,`value="${row.cs_id}" selected`)}
+      </select></td>
+      <td><input type="number" min="0.01" step="0.1" value="${row.area_ha||''}" placeholder="0.0"
+        oninput="_farm().crop_plan[${i}].area_ha=parseFloat(this.value)||0; autosave(); updateLandBar()"></td>
+      <td><button class="btn btn-danger btn-sm" onclick="removeCropRow(${i})">✕</button></td>
+    </tr>`).join('');
+}
+
+function updateLandBar(){
+  const f=_farm();
+  const fill=document.getElementById('land-fill');
+  const lbl =document.getElementById('land-lbl');
+  const msg =document.getElementById('land-msg');
+  if(!fill) return;
+  if(!f){ fill.style.width='0%'; if(lbl) lbl.textContent='0.00 / 0.00 ha'; return; }
+  const farea=f.area||0;
+  const used=(f.crop_plan||[]).reduce((s,r)=>s+(parseFloat(r.area_ha)||0),0);
+  const pct=farea>0?Math.min(105,(used/farea)*100):0;
+  fill.style.width=pct+'%';
+  fill.style.background=pct>100?'var(--alert)':pct>90?'var(--warn)':'var(--leaf)';
+  if(lbl) lbl.textContent=used.toFixed(2)+' / '+farea.toFixed(2)+' ha';
+  if(msg) msg.innerHTML=pct>100
+    ?`<span style="color:var(--alert)">⛔ Over-allocated by ${(used-farea).toFixed(2)} ha</span>`
+    :`<span>${(farea-used).toFixed(2)} ha unallocated</span>`;
+}
+
+function validateEntry(){
+  const p=activeProj(); const f=_farm();
+  const errs=[];
+  if(!f){ errs.push('🔴 No farm selected.'); }
+  else{
+    const used=(f.crop_plan||[]).reduce((s,r)=>s+(parseFloat(r.area_ha)||0),0);
+    if(used>(f.area||0)+0.001) errs.push(`🔴 Land over-allocated: ${used.toFixed(2)} ha > ${(f.area||0).toFixed(2)} ha.`);
+    if(!(f.crop_plan||[]).length) errs.push('🔴 No cropping systems in crop plan.');
+    (f.crop_plan||[]).forEach((r,i)=>{ if(!r.cs_id) errs.push(`🔴 Row ${i+1}: no cropping system selected.`); });
+  }
+  if(p && p.periods.reduce((s,per)=>s+(per.days||0),0)!==365)
+    errs.push('🔴 Calendar does not sum to 365 — fix in ⚙ Parameters › Calendar.');
+  const banner=document.getElementById('entry-warn');
+  const list  =document.getElementById('entry-warn-list');
+  if(errs.length){
+    banner.style.display='block'; banner.style.borderColor='#EF4444'; banner.style.background='#FEE2E2';
+    list.innerHTML=errs.map(w=>`<li>${w}</li>`).join('');
+  } else { banner.style.display='none'; }
+  return errs.length===0;
+}
+</script>
+
+
+<!-- ============================================================
+     JS: ENGINE
+     Pure calculation — no DOM access.
+     ============================================================ -->
+<script id="js-engine">
+function calcFarm(proj_obj, farm_obj, plan_override){
+  const p    = proj_obj;
+  const f    = farm_obj;
+  const plan = plan_override || f.crop_plan || [];
+  const N    = p.periods.length;
+  const pers = p.periods;
+
+  // 1. Labour supply per period (prorated by period days)
+  const hh_supply=Array(N).fill(0);
+  p.member_types.forEach(mt=>{
+    const cnt=f.composition[mt.id]||0;
+    pers.forEach((per,pi)=>{ hh_supply[pi]+=cnt*(mt.labour_days||0)*((per.days||0)/365); });
+  });
+
+  // 2. Labour demand + input cost per period
+  const labour_demand=Array(N).fill(0);
+  const input_cost   =Array(N).fill(0);
+  plan.forEach(row=>{
+    const cs=p.cropping_systems.find(c=>c.id===row.cs_id); if(!cs) return;
+    cs.tasks.forEach(t=>{ pers.forEach((per,pi)=>{ labour_demand[pi]+=(t.labour_ha[pi]||0)*row.area_ha; }); });
+    cs.inputs.forEach(inp=>{ pers.forEach((per,pi)=>{ input_cost[pi]+=(inp.cost_ha[pi]||0)*row.area_ha; }); });
+  });
+
+  const hired_days=pers.map((per,pi)=>Math.max(0,labour_demand[pi]-hh_supply[pi]));
+  const hired_cost=hired_days.map(d=>d*(p.hired_labour_price||0));
+
+  // 3. Production per crop product per period
+  const prod={};
+  p.crop_products.forEach(cp=>{ prod[cp.id]=Array(N).fill(0); });
+  plan.forEach(row=>{
+    const cs=p.cropping_systems.find(c=>c.id===row.cs_id); if(!cs) return;
+    cs.outputs.forEach(o=>{
+      if(!prod[o.cp_id]) prod[o.cp_id]=Array(N).fill(0);
+      pers.forEach((per,pi)=>{ prod[o.cp_id][pi]+=(o.yield_ha[pi]||0)*row.area_ha; });
+    });
+  });
+
+  // 4. Household annual consumption per product
+  const hh_need={};
+  p.crop_products.forEach(cp=>{ hh_need[cp.id]=0; });
+  p.member_types.forEach(mt=>{
+    const cnt=f.composition[mt.id]||0;
+    mt.consumption.forEach(c=>{ if(c.cp_id) hh_need[c.cp_id]=(hh_need[c.cp_id]||0)+cnt*(c.kg_year||0); });
+  });
+
+  // 5. Food balance per product → sell surplus or buy deficit
+  const food={};
+  const sell_rev  =Array(N).fill(0);
+  const buy_cost  =Array(N).fill(0);
+
+  p.crop_products.forEach(cp=>{
+    const tot_prod=prod[cp.id].reduce((s,v)=>s+v,0);
+    const tot_need=hh_need[cp.id]||0;
+    const balance =tot_prod-tot_need;
+    const sell_cp =Array(N).fill(0);
+    const buy_cp  =Array(N).fill(0);
+    let sold_kg=0, purchase_kg=0;
+
+    if(balance>=0){
+      sold_kg=balance;
+      if(tot_prod>0) pers.forEach((per,pi)=>{
+        sell_cp[pi]=(prod[cp.id][pi]/tot_prod)*sold_kg*(cp.sell_price[pi]||0);
+      });
+    } else {
+      purchase_kg=-balance;
+      const pp=purchase_kg/N;
+      pers.forEach((per,pi)=>{ buy_cp[pi]=pp*(cp.buy_price[pi]||0); });
+    }
+
+    food[cp.id]={ tot_prod, tot_need, balance, sold_kg, purchase_kg, sell_cp, buy_cp, prod_by_period:prod[cp.id] };
+    pers.forEach((per,pi)=>{ sell_rev[pi]+=sell_cp[pi]; buy_cost[pi]+=buy_cp[pi]; });
+  });
+
+  // 6. Non-farm income per period
+  const nfi=Array(N).fill(0);
+  (f.nfi||[]).forEach(n=>{ pers.forEach((per,pi)=>{ nfi[pi]+=(n.amount[pi]||0); }); });
+
+  // 7. Cash flow
+  const cash_in =pers.map((per,pi)=>sell_rev[pi]+nfi[pi]);
+  const cash_out=pers.map((per,pi)=>input_cost[pi]+hired_cost[pi]+buy_cost[pi]);
+  const cash_net=pers.map((per,pi)=>cash_in[pi]-cash_out[pi]);
+  let cum=0;
+  const cash_cum=cash_net.map(v=>{ cum+=v; return cum; });
+
+  // 8. GFM per cropping system
+  const gfm_cs={};
+  plan.forEach(row=>{
+    const cs=p.cropping_systems.find(c=>c.id===row.cs_id); if(!cs) return;
+    const cs_total=plan.filter(r=>r.cs_id===row.cs_id).reduce((s,r)=>s+r.area_ha,0)||1;
+    const share=row.area_ha/cs_total;
+    let vqp=0;
+    cs.outputs.forEach(o=>{ const fr=food[o.cp_id]; if(fr) vqp+=fr.sell_cp.reduce((s,v)=>s+v,0)*share; });
+    let inpC=0; cs.inputs.forEach(inp=>{ inp.cost_ha.forEach((c,pi)=>{ inpC+=c*row.area_ha; }); });
+    let labC=0; cs.tasks.forEach(t=>{
+      pers.forEach((per,pi)=>{
+        const demand=t.labour_ha[pi]*row.area_ha;
+        const hf=labour_demand[pi]>0?Math.max(0,(labour_demand[pi]-hh_supply[pi])/labour_demand[pi]):0;
+        labC+=demand*hf*(p.hired_labour_price||0);
+      });
+    });
+    gfm_cs[row.cs_id]=(gfm_cs[row.cs_id]||0)+(vqp-inpC-labC);
+  });
+
+  // 9. Aggregates
+  const GFM=sell_rev.reduce((s,v)=>s+v,0)-input_cost.reduce((s,v)=>s+v,0)-hired_cost.reduce((s,v)=>s+v,0);
+  const GM =GFM+nfi.reduce((s,v)=>s+v,0);
+  const hhs=p.member_types.reduce((s,mt)=>s+(f.composition[mt.id]||0),0);
+  const inc_pc=hhs>0?GM/hhs:0;
+  const end_cash=cash_cum[N-1]||0;
+
+  const food_deficit=p.crop_products.filter(cp=>(hh_need[cp.id]||0)>0&&(food[cp.id]?.balance||0)<0);
+  const food_secure=food_deficit.length===0;
+  const econ_secure=end_cash>=0;
+  const resilience=food_secure&&econ_secure?'secure':!food_secure&&!econ_secure?'vulnerable':'fragile';
+
+  return { GFM:Math.round(GFM), GM:Math.round(GM), inc_pc:Math.round(inc_pc),
+    end_cash:Math.round(end_cash), food_secure, econ_secure, resilience, hhs,
+    gfm_cs, cash_in, cash_out, cash_net, cash_cum,
+    hh_supply, labour_demand, hired_days, hired_cost,
+    food, nfi, sell_rev };
+}
+</script>
+
+
+<!-- ============================================================
+     JS: RESULTS
+     ============================================================ -->
+<script id="js-results">
+let _baseline=null;
+
+function runAnalysis(){
+  if(!validateEntry()) return;
+  const p=activeProj(); const f=_farm();
+  f.area=parseFloat(document.getElementById('farm-area').value)||f.area;
+  autosave();
+  _baseline=calcFarm(p,f);
+  f.results=_baseline; autosave();
+  _renderResults(_baseline,'bl');
+  showPage('results');
+}
+
+function _renderResults(r, tag){
+  if(!r) return;
+  const p=activeProj(); if(!p) return;
+  const pLabels=p.periods.map(per=>per.name);
+  const SM={ secure:{cls:'b-ok',lbl:'● Secure'}, fragile:{cls:'b-warn',lbl:'● Fragile'}, vulnerable:{cls:'b-err',lbl:'● Vulnerable'} };
+
+  _badge('rs-food',    r.food_secure?SM.secure:SM.fragile);
+  _badge('rs-econ',    r.econ_secure?SM.secure:(r.end_cash>-100?SM.fragile:SM.vulnerable));
+  _badge('rs-overall', SM[r.resilience]);
+
+  const totalHired=Math.round(r.hired_cost.reduce((s,v)=>s+v,0));
+  const defCount  =p.crop_products.filter(cp=>(r.food[cp.id]?.balance||0)<0&&(r.food[cp.id]?.tot_need||0)>0).length;
+
+  _kpis('kpi-grid',[
+    {l:'Gross Farm Margin',  v:'$'+r.GFM.toLocaleString(),  u:'USD / year',          c:''},
+    {l:'Total HH Income',   v:'$'+r.GM.toLocaleString(),   u:'USD / year',          c:''},
+    {l:'Income / Capita',   v:'$'+r.inc_pc.toLocaleString(),u:'USD / person / year',c:''},
+    {l:'End-Year Cash',     v:(r.end_cash>=0?'+':'')+' $'+r.end_cash.toLocaleString(), u:'USD', c:r.end_cash<0?'k-red':''},
+    {l:'Hired Labour Cost', v:'$'+totalHired.toLocaleString(), u:'USD / year',       c:totalHired>0?'k-ora':''},
+    {l:'Food Deficits',     v:defCount, u:'products need purchasing',                c:defCount>0?'k-ora':''},
+  ]);
+
+  _chart('ch-cash','bar',{labels:pLabels,datasets:[
+    {label:'Income ($)',  data:r.cash_in.map(v=>Math.round(v)),  backgroundColor:'#5A9B70',borderRadius:3},
+    {label:'Expenses ($)',data:r.cash_out.map(v=>Math.round(v)), backgroundColor:'#C0392B',borderRadius:3},
+    {label:'Cumul. ($)',  data:r.cash_cum.map(v=>Math.round(v)), type:'line',borderColor:'#2C1810',backgroundColor:'transparent',borderWidth:2,pointRadius:4},
+  ]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'}}}});
+
+  const csL=[],csV=[];
+  p.cropping_systems.forEach(cs=>{ if(r.gfm_cs[cs.id]!==undefined){csL.push(cs.name||cs.id);csV.push(Math.round(r.gfm_cs[cs.id]));} });
+  _chart('ch-gm','bar',{labels:csL,datasets:[{label:'GFM ($)',data:csV,backgroundColor:csV.map(v=>v>=0?'#3D6B4F':'#C0392B'),borderRadius:4}]},
+    {indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.05)'}}}});
+
+  _foodSection(document.getElementById(tag==='bl'?'food-section':'sc-food-section'),r,p,pLabels,tag);
+
+  const labEl=document.getElementById('labour-wrap');
+  if(labEl) labEl.innerHTML=`<table class="tbl"><thead><tr><th>Period</th><th>HH Supply (days)</th><th>Demand (days)</th><th>Hired (days)</th><th>Hired Cost ($)</th></tr></thead><tbody>`+
+    p.periods.map((per,pi)=>`<tr><td>${_esc(per.name)}</td><td>${Math.round(r.hh_supply[pi])}</td><td>${Math.round(r.labour_demand[pi])}</td>
+      <td class="${r.hired_days[pi]>0?'neg':''}">${Math.round(r.hired_days[pi])}</td>
+      <td class="${r.hired_cost[pi]>0?'neg':''}">${Math.round(r.hired_cost[pi])}</td></tr>`).join('')+
+    '</tbody></table>';
+}
+
+function _foodSection(el,r,p,pLabels,tag){
+  if(!el) return;
+  const rel=p.crop_products.filter(cp=>(r.food[cp.id]?.tot_need||0)>0||(r.food[cp.id]?.tot_prod||0)>0);
+  if(!rel.length){ el.innerHTML=''; return; }
+  el.innerHTML='<div class="cgrid">'+rel.map(cp=>{
+    const fr=r.food[cp.id]||{};
+    const bal=fr.balance||0;
+    return `<div class="card"><h3>🌽 ${_esc(cp.name)} — Annual Balance</h3>
+      <div style="display:flex;gap:1rem;font-size:.8rem;margin-bottom:.55rem;flex-wrap:wrap;">
+        <span>Produced: <strong>${Math.round(fr.tot_prod||0)} kg</strong></span>
+        <span>Need: <strong>${Math.round(fr.tot_need||0)} kg</strong></span>
+        <span>Balance: <strong style="color:${bal>=0?'var(--ok)':'var(--alert)'}">${bal>=0?'+':''}${Math.round(bal)} kg</strong></span>
+        ${fr.purchase_kg>0?`<span style="color:var(--warn)">Purchase: <strong>${Math.round(fr.purchase_kg)} kg</strong></span>`:''}
+      </div>
+      <div class="chart-wrap" style="height:185px;"><canvas id="fc-${cp.id}-${tag}"></canvas></div>
+    </div>`;
+  }).join('')+'</div>';
+  setTimeout(()=>{
+    rel.forEach(cp=>{
+      const fr=r.food[cp.id]||{};
+      const prodD=(fr.prod_by_period||Array(pLabels.length).fill(0)).map(v=>Math.round(v));
+      const needD=Array(pLabels.length).fill(Math.round((fr.tot_need||0)/pLabels.length));
+      _chart(`fc-${cp.id}-${tag}`,'bar',{labels:pLabels,datasets:[
+        {label:'Production (kg)',data:prodD,backgroundColor:'#3D6B4F',borderRadius:3},
+        {label:'Periodic Need (kg)',data:needD,type:'line',borderColor:'#C0392B',backgroundColor:'transparent',borderWidth:2,pointRadius:3},
+      ]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{beginAtZero:true}}});
+    });
+  },60);
+}
+
+function _badge(id,s){ const el=document.getElementById(id); if(el){el.className='badge '+s.cls;el.textContent=s.lbl;} }
+function _kpis(cid,items){ const el=document.getElementById(cid); if(!el) return; el.innerHTML=items.map(k=>`<div class="kpi ${k.c}"><div class="kpi-l">${k.l}</div><div class="kpi-v">${k.v}</div><div class="kpi-u">${k.u}</div></div>`).join(''); }
+function _chart(id,type,data,options){
+  if(_charts[id]){_charts[id].destroy();delete _charts[id];}
+  const el=document.getElementById(id); if(!el) return;
+  _charts[id]=new Chart(el,{type,data,options});
+}
+</script>
+
+
+<!-- ============================================================
+     JS: SCENARIOS
+     ============================================================ -->
+<script id="js-scenarios">
+let _scPlan=[];
+let _scResult=null;
+
+function addScRow(data){ _scPlan.push({cs_id:data?.cs_id||'',area_ha:data?.area_ha||0}); _renderScPlan(); }
+function removeScRow(i){ _scPlan.splice(i,1); _renderScPlan(); }
+
+function _renderScPlan(){
+  const p=activeProj();
+  const tbody=document.getElementById('sc-tbody'); if(!tbody) return;
+  const csOpts=(p?.cropping_systems||[]).map(cs=>`<option value="${cs.id}">${_esc(cs.name||cs.id)}</option>`).join('');
+  tbody.innerHTML=_scPlan.map((row,i)=>`
+    <tr>
+      <td><select onchange="_scPlan[${i}].cs_id=this.value">
+        <option value="">— select —</option>${csOpts.replace(`value="${row.cs_id}"`,`value="${row.cs_id}" selected`)}
+      </select></td>
+      <td><input type="number" min="0.01" step="0.1" value="${row.area_ha||''}" placeholder="0.0"
+        oninput="_scPlan[${i}].area_ha=parseFloat(this.value)||0"></td>
+      <td><button class="btn btn-danger btn-sm" onclick="removeScRow(${i})">✕</button></td>
+    </tr>`).join('');
+}
+
+function runScenario(){
+  const p=activeProj(); const f=_farm();
+  if(!p||!f)     { alert('Select a farm first.'); return; }
+  if(!_baseline) { alert('Run baseline analysis first (📋 Data Entry → ▶ Run Analysis).'); return; }
+  if(!_scPlan.length){ alert('Add at least one row to the scenario crop plan.'); return; }
+  _scResult=calcFarm(p,f,_scPlan);
+  document.getElementById('sc-results').style.display='block';
+  _renderScComparison();
+}
+
+function _renderScComparison(){
+  const b=_baseline, s=_scResult;
+  const p=activeProj(); if(!p) return;
+  const pLabels=p.periods.map(per=>per.name);
+  function diff(bv,sv){ const d=sv-bv; return `<span class="${d>=0?'pos':'neg'}">${d>=0?'+':''}${Math.round(d).toLocaleString()}</span>`; }
+  const rows=[
+    ['Gross Farm Margin ($)',b.GFM,s.GFM],
+    ['Total HH Income ($)',b.GM,s.GM],
+    ['Income / Capita ($/person)',b.inc_pc,s.inc_pc],
+    ['End-Year Cash ($)',b.end_cash,s.end_cash],
+    ['Hired Labour Cost ($)',Math.round(b.hired_cost.reduce((x,v)=>x+v,0)),Math.round(s.hired_cost.reduce((x,v)=>x+v,0))],
+  ];
+  const tbody=document.getElementById('sc-cmp-tbody'); if(!tbody) return;
+  tbody.innerHTML=rows.map(([lbl,bv,sv])=>`<tr><td><strong>${lbl}</strong></td><td>${bv.toLocaleString()}</td><td>${sv.toLocaleString()}</td><td>${diff(bv,sv)}</td></tr>`).join('');
+
+  _chart('ch-sc-cash','bar',{labels:pLabels,datasets:[
+    {label:'Baseline cumul. ($)',data:b.cash_cum.map(v=>Math.round(v)),backgroundColor:'rgba(122,96,80,.6)',borderRadius:3},
+    {label:'Scenario cumul. ($)',data:s.cash_cum.map(v=>Math.round(v)),backgroundColor:'rgba(61,107,79,.7)',borderRadius:3},
+  ]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}});
+
+  const csL=p.cropping_systems.map(cs=>cs.name||cs.id);
+  _chart('ch-sc-gm','bar',{labels:csL,datasets:[
+    {label:'Baseline GFM ($)', data:p.cropping_systems.map(cs=>Math.round(b.gfm_cs[cs.id]||0)),backgroundColor:'rgba(122,96,80,.6)',borderRadius:3},
+    {label:'Scenario GFM ($)',data:p.cropping_systems.map(cs=>Math.round(s.gfm_cs[cs.id]||0)),backgroundColor:'rgba(61,107,79,.7)',borderRadius:3},
+  ]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}});
+
+  _foodSection(document.getElementById('sc-food-section'),s,p,pLabels,'sc');
+}
+</script>
+
+
+<!-- ============================================================
+     JS: EXPORT
+     ============================================================ -->
+<script id="js-export">
+function doExportJSON(){
+  const p=activeProj(); if(!p){alert('No active project.');return;}
+  _download(
+    JSON.stringify({project:p, exported:new Date().toISOString()},null,2),
+    'raiz_export_'+new Date().toISOString().slice(0,10)+'.json',
+    'application/json'
+  );
+}
+
+function doExportCSV(){
+  const p=activeProj(); if(!p){alert('No active project.');return;}
+
+  // ── Build header ──────────────────────────────────────────────
+  const baseHdr = [
+    'FarmID','HouseholdHead','Village','ProjectName',
+    'HH_size',
+    // one column per member type
+    ...p.member_types.map(mt=>'HH_'+_csvSafe(mt.name||mt.id)),
+    'FarmArea_ha','CroppedArea_ha',
+    // one column per cropping system present in plan
+    'CroppingSystems',
+    // income & margin
+    'GFM_USD','TotalHH_Income_USD','IncomePerCapita_USD','EndYearCash_USD',
+    // labour
+    'TotalLabourDemand_days','TotalHiredLabour_days','TotalHiredLabourCost_USD',
+    // food balance per crop product
+    ...p.crop_products.map(cp=>'Prod_'+_csvSafe(cp.name||cp.id)+'_kg'),
+    ...p.crop_products.map(cp=>'Need_'+_csvSafe(cp.name||cp.id)+'_kg'),
+    ...p.crop_products.map(cp=>'Balance_'+_csvSafe(cp.name||cp.id)+'_kg'),
+    ...p.crop_products.map(cp=>'Purchase_'+_csvSafe(cp.name||cp.id)+'_kg'),
+    // per-period cash columns
+    ...p.periods.map(per=>'CashIn_'+_csvSafe(per.name||'P')+'_USD'),
+    ...p.periods.map(per=>'CashOut_'+_csvSafe(per.name||'P')+'_USD'),
+    ...p.periods.map(per=>'CashCum_'+_csvSafe(per.name||'P')+'_USD'),
+    // status
+    'FoodSecure','EconSecure','Resilience','ResultsCalculated'
+  ];
+
+  // ── Build rows ────────────────────────────────────────────────
+  const dataRows = Object.values(p.farms).map(f=>{
+    const r = f.results || null;
+    const hhs = p.member_types.reduce((s,mt)=>s+(f.composition[mt.id]||0),0);
+    const croppedArea = (f.crop_plan||[]).reduce((s,row)=>s+(row.area_ha||0),0);
+    const csList = (f.crop_plan||[]).map(row=>{
+      const cs=p.cropping_systems.find(c=>c.id===row.cs_id);
+      return (cs?.name||row.cs_id||'?')+':'+row.area_ha+'ha';
+    }).join('|');
+
+    const memberCounts = p.member_types.map(mt=>f.composition[mt.id]||0);
+
+    // labour totals
+    const labDemand  = r ? Math.round(r.labour_demand.reduce((s,v)=>s+v,0)) : '';
+    const labHired   = r ? Math.round(r.hired_days.reduce((s,v)=>s+v,0))    : '';
+    const labCost    = r ? Math.round(r.hired_cost.reduce((s,v)=>s+v,0))    : '';
+
+    // food columns
+    const prodCols    = p.crop_products.map(cp=>r ? Math.round(r.food[cp.id]?.tot_prod||0)    : '');
+    const needCols    = p.crop_products.map(cp=>r ? Math.round(r.food[cp.id]?.tot_need||0)    : '');
+    const balCols     = p.crop_products.map(cp=>r ? Math.round(r.food[cp.id]?.balance||0)     : '');
+    const purchCols   = p.crop_products.map(cp=>r ? Math.round(r.food[cp.id]?.purchase_kg||0) : '');
+
+    // per-period cash
+    const cashInCols  = r ? r.cash_in.map(v=>Math.round(v))  : Array(p.periods.length).fill('');
+    const cashOutCols = r ? r.cash_out.map(v=>Math.round(v)) : Array(p.periods.length).fill('');
+    const cashCumCols = r ? r.cash_cum.map(v=>Math.round(v)) : Array(p.periods.length).fill('');
+
+    return [
+      f.id, f.name, f.village||'', p.name,
+      hhs,
+      ...memberCounts,
+      f.area||0, croppedArea.toFixed(2),
+      csList,
+      r?r.GFM:'', r?r.GM:'', r?r.inc_pc:'', r?r.end_cash:'',
+      labDemand, labHired, labCost,
+      ...prodCols, ...needCols, ...balCols, ...purchCols,
+      ...cashInCols, ...cashOutCols, ...cashCumCols,
+      r?r.food_secure:'', r?r.econ_secure:'', r?r.resilience||'':'',
+      r?'yes':'no'
+    ].map(v=>_csvCell(v)).join(',');
+  });
+
+  const csv = [baseHdr.join(','), ...dataRows].join('\n');
+  _download(csv, 'raiz_farms_'+p.name.replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv', 'text/csv');
+}
+
+// Update the live status summary shown in the Sessions page
+function renderExportStatus(){
+  const el=document.getElementById('export-status'); if(!el) return;
+  const p=activeProj();
+  if(!p){ el.innerHTML='<span class="muted">No active project selected.</span>'; return; }
+  const farms=Object.values(p.farms||{});
+  const withResults=farms.filter(f=>f.results);
+  const without=farms.filter(f=>!f.results);
+  let html=`<strong>${_esc(p.name)}</strong> · ${farms.length} farm(s) · `;
+  html+=`<span style="color:var(--ok);font-weight:600;">${withResults.length} with results</span>`;
+  if(without.length) html+=` · <span style="color:var(--warn);font-weight:600;">${without.length} pending (run analysis first)</span>`;
+  if(farms.length){
+    html+='<div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.3rem;">';
+    farms.forEach(f=>{
+      const has=!!f.results;
+      html+=`<span style="font-size:.72rem;padding:.1rem .45rem;border-radius:4px;background:${has?'#D4EDDA':'#FFF3CD'};color:${has?'#155724':'#856404'};font-family:\'DM Mono\',monospace;">${_esc(f.id)} ${has?'✓':'⏳'}</span>`;
+    });
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+
+// Called when sessions page opens
+function onSessionsPageOpen(){
+  renderSessions();
+  renderExportStatus();
+}
+
+// CSV helpers
+function _csvSafe(str){ return String(str||'').replace(/[^a-zA-Z0-9_]/g,'_'); }
+function _csvCell(v){
+  if(v===null||v===undefined) return '';
+  const s=String(v);
+  if(s.includes(',')||s.includes('"')||s.includes('\n')) return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+</script>
+
+
+<!-- ============================================================
+     JS: UTILITIES
+     ============================================================ -->
+<script id="js-utils">
+function _esc(str){
+  if(!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _download(content,filename,mime){
+  const blob=new Blob([content],{type:mime});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+}
+</script>
+
+
+<!-- ============================================================
+     JS: INIT
+     ============================================================ -->
+<script id="js-init">
+loadAutosave();
+loadSessions();
+updatePill();
+renderProjectList();
+renderFarmList();
+renderSessions();
+showPage('projects');
+</script>
+
+</body>
+</html>
