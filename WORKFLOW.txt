@@ -13,9 +13,8 @@ Live URL   : https://guillaume-bruelle.github.io/raiz-dst/
 Local path : wherever you cloned raiz-dst/ on your computer
 
 Tools used:
-  - VS Code           → editing the HTML file
-  - GitHub Desktop    → committing and pushing to GitHub
-  - Claude.ai         → AI assistance for code changes
+  - VS Code           → editing, committing and pushing to GitHub
+  - Claude Code       → AI assistance for code changes (VS Code panel)
   - Chrome/Firefox    → testing the tool locally
 
 
@@ -23,16 +22,14 @@ Tools used:
 EVERY TIME YOU SIT DOWN TO WORK
 ───────────────────────────────────────────────────────────────
 
-1. Open GitHub Desktop
-   → Click "Fetch origin" to check for any remote changes
-   → If changes exist, click "Pull"
-
-2. Open VS Code
+1. Open VS Code
    → File → Open Folder → select your raiz-dst/ folder
 
-3. Open Claude.ai in your browser
-   → Keep this conversation open, or start a new one
-   → Have app/raiz_dst.html open in VS Code alongside
+2. Pull latest changes: open Source Control (Ctrl+Shift+G)
+   → Click the "..." menu → Pull
+
+3. Open the Claude Code panel in VS Code (sidebar)
+   → Have app/raiz_dst.html open alongside
 
 You are ready to work.
 
@@ -59,27 +56,24 @@ MAKING A CHANGE (small fix or improvement)
      js-state         → shared data and autosave
      js-utils         → helper functions (_esc, _download)
 
-3. Select the entire block (from <!-- comment --> to </script>)
-   → Copy it (Ctrl+C)
-
-4. Go to Claude.ai
-   → Paste the block
+3. Open the Claude Code panel in VS Code (sidebar)
    → Describe what you want changed, e.g.:
-       "In this js-engine block, update the food purchase
+       "In the js-engine block, update the food purchase
         distribution to be weighted by period length
         instead of split equally across periods"
+   → Claude will read the file, make the edit directly, and
+     show you a diff to review before applying
 
-5. Copy Claude's updated block (Ctrl+C)
+4. Review the diff in the editor
+   → Accept if it looks correct
 
-6. Back in VS Code, select the old block and paste (Ctrl+V)
+5. Save the file (Ctrl+S)
 
-7. Save the file (Ctrl+S)
-
-8. Test it: open app/raiz_dst.html in Chrome
+6. Test it: open app/raiz_dst.html in Chrome
    → Drag the file into Chrome, or right-click → Open with Chrome
 
-9. If it works → commit (see COMMITTING below)
-   If not → go back to step 4 and describe the problem
+7. If it works → commit (see COMMITTING below)
+   If not → describe the problem to Claude in the same panel
 
 
 ───────────────────────────────────────────────────────────────
@@ -88,10 +82,12 @@ COMMITTING AND PUSHING
 
 After any change that works:
 
-1. Open GitHub Desktop
+1. Open Source Control in VS Code (Ctrl+Shift+G)
    → You will see raiz_dst.html listed as changed
 
-2. Write a commit message in the bottom-left box.
+2. Click the "+" next to the file to stage it
+
+3. Type a commit message in the box at the top.
    Use this format:
 
      fix: land bar not updating when farm area changes
@@ -109,11 +105,11 @@ After any change that works:
      style:   visual or layout change only
      release: new version snapshot
 
-3. Click "Commit to main"
+4. Click "Commit" (checkmark button)
 
-4. Click "Push origin" (top right)
+5. Click "Sync Changes" (or "Push") to push to GitHub
 
-5. Done. The live URL updates automatically within ~2 minutes.
+6. Done. The live URL updates automatically within ~2 minutes.
    Check: https://guillaume-bruelle.github.io/raiz-dst/
 
 
@@ -203,8 +199,7 @@ USEFUL LINKS
 
 Live tool       : https://guillaume-bruelle.github.io/raiz-dst/
 Repository      : https://github.com/guillaume-bruelle/raiz-dst
-Claude.ai       : https://claude.ai
-GitHub Desktop  : https://desktop.github.com
+Claude Code     : https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code
 VS Code         : https://code.visualstudio.com
 
 
