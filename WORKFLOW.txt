@@ -1,0 +1,231 @@
+═══════════════════════════════════════════════════════════════
+RAIZ DST — DAY-TO-DAY DEVELOPMENT WORKFLOW
+Reference card — keep this file in your raiz-dst/ repository
+═══════════════════════════════════════════════════════════════
+
+
+───────────────────────────────────────────────────────────────
+SETUP (one time only — already done)
+───────────────────────────────────────────────────────────────
+
+Repository : https://github.com/guillaume-bruelle/raiz-dst
+Live URL   : https://guillaume-bruelle.github.io/raiz-dst/
+Local path : wherever you cloned raiz-dst/ on your computer
+
+Tools used:
+  - VS Code           → editing the HTML file
+  - GitHub Desktop    → committing and pushing to GitHub
+  - Claude.ai         → AI assistance for code changes
+  - Chrome/Firefox    → testing the tool locally
+
+
+───────────────────────────────────────────────────────────────
+EVERY TIME YOU SIT DOWN TO WORK
+───────────────────────────────────────────────────────────────
+
+1. Open GitHub Desktop
+   → Click "Fetch origin" to check for any remote changes
+   → If changes exist, click "Pull"
+
+2. Open VS Code
+   → File → Open Folder → select your raiz-dst/ folder
+
+3. Open Claude.ai in your browser
+   → Keep this conversation open, or start a new one
+   → Have app/raiz_dst.html open in VS Code alongside
+
+You are ready to work.
+
+
+───────────────────────────────────────────────────────────────
+MAKING A CHANGE (small fix or improvement)
+───────────────────────────────────────────────────────────────
+
+1. In VS Code, open app/raiz_dst.html
+
+2. Use Ctrl+F to find the right block by its label, e.g.:
+     js-engine        → calculation formulas
+     js-entry         → data entry form logic
+     js-results       → results rendering and charts
+     js-sessions      → save/load/export logic
+     js-projects      → project management
+     js-calendar      → period definitions
+     js-crop-products → crop product parameters
+     js-member-types  → household member types
+     js-cropping-systems → cropping system definitions
+     js-farms         → farm profile management
+     js-scenarios     → scenario simulation
+     js-nav           → navigation between tabs
+     js-state         → shared data and autosave
+     js-utils         → helper functions (_esc, _download)
+
+3. Select the entire block (from <!-- comment --> to </script>)
+   → Copy it (Ctrl+C)
+
+4. Go to Claude.ai
+   → Paste the block
+   → Describe what you want changed, e.g.:
+       "In this js-engine block, update the food purchase
+        distribution to be weighted by period length
+        instead of split equally across periods"
+
+5. Copy Claude's updated block (Ctrl+C)
+
+6. Back in VS Code, select the old block and paste (Ctrl+V)
+
+7. Save the file (Ctrl+S)
+
+8. Test it: open app/raiz_dst.html in Chrome
+   → Drag the file into Chrome, or right-click → Open with Chrome
+
+9. If it works → commit (see COMMITTING below)
+   If not → go back to step 4 and describe the problem
+
+
+───────────────────────────────────────────────────────────────
+COMMITTING AND PUSHING
+───────────────────────────────────────────────────────────────
+
+After any change that works:
+
+1. Open GitHub Desktop
+   → You will see raiz_dst.html listed as changed
+
+2. Write a commit message in the bottom-left box.
+   Use this format:
+
+     fix: land bar not updating when farm area changes
+     feat: add livestock section to data entry
+     model: update labour supply proration formula
+     docs: add consumption note to user guide
+     style: improve mobile layout for data entry tab
+     release: v1.1
+
+   Prefix guide:
+     fix:     bug fix, no new feature
+     feat:    new feature or UI addition
+     model:   change to calculation engine
+     docs:    change to guide or documentation files
+     style:   visual or layout change only
+     release: new version snapshot
+
+3. Click "Commit to main"
+
+4. Click "Push origin" (top right)
+
+5. Done. The live URL updates automatically within ~2 minutes.
+   Check: https://guillaume-bruelle.github.io/raiz-dst/
+
+
+───────────────────────────────────────────────────────────────
+RELEASING A NEW VERSION
+───────────────────────────────────────────────────────────────
+
+When you have made enough changes to warrant a new version:
+
+Version numbering:
+  v1.0.1  → small bug fix, model unchanged
+  v1.1    → new feature, model unchanged
+  v2.0    → model equations or data structure changed
+
+Steps:
+
+1. In VS Code, open app/raiz_dst.html
+   → Find the <title> tag at the top
+   → Update: <title>RAIZ — Farm Analysis DST v1.1</title>
+
+2. Copy app/raiz_dst.html
+   → Paste into versions/
+   → Rename to: v1.1_raiz_dst.html
+
+3. Open CHANGELOG.md
+   → Add a new entry at the top:
+
+     ## [v1.1] — 2025-12-01
+     ### Added
+     - Brief description of what changed
+
+4. Commit with message: release: v1.1
+
+5. Push
+
+
+───────────────────────────────────────────────────────────────
+SHARING THE TOOL WITH FIELD AGENTS
+───────────────────────────────────────────────────────────────
+
+Option A — Live URL (easiest, requires internet once)
+  Share this link:
+  https://guillaume-bruelle.github.io/raiz-dst/
+  → Works on any browser, desktop or Android
+  → Always the latest version
+
+Option B — Offline file (no internet needed after transfer)
+  1. Go to github.com/guillaume-bruelle/raiz-dst
+  2. Open app/raiz_dst.html
+  3. Click "Download raw file"
+  4. Send the file by email, USB, or WhatsApp
+  → Agent opens it in Chrome on their device
+  → Works fully offline
+
+Sharing data between agents (sessions):
+  Agent A: Sessions & Export → Download .json
+  Send the .json file to Agent B (email, WhatsApp, USB)
+  Agent B: Sessions & Export → Load from file → select .json
+
+
+───────────────────────────────────────────────────────────────
+SAVING AND BACKING UP FIELD DATA
+───────────────────────────────────────────────────────────────
+
+The tool auto-saves to browser localStorage (see timestamp
+in the top-right header after every change).
+
+But localStorage is NOT a permanent backup. Always:
+
+  End of each field day:
+  → Sessions & Export tab
+  → Give session a name: e.g. Mutoko_2025-11-21
+  → Click "Save to Browser" (checkpoint in this browser)
+  → Click "Download .json" (real file backup on device)
+  → Store the .json in a safe folder (cloud drive, USB)
+
+  For the research team:
+  → Sessions & Export tab → Export Farm Data for Research
+  → Check status panel: all farms should show ✓
+  → Click "Download CSV"
+  → Send CSV to research team for analysis
+
+
+───────────────────────────────────────────────────────────────
+USEFUL LINKS
+───────────────────────────────────────────────────────────────
+
+Live tool       : https://guillaume-bruelle.github.io/raiz-dst/
+Repository      : https://github.com/guillaume-bruelle/raiz-dst
+Claude.ai       : https://claude.ai
+GitHub Desktop  : https://desktop.github.com
+VS Code         : https://code.visualstudio.com
+
+
+───────────────────────────────────────────────────────────────
+FILE STRUCTURE REMINDER
+───────────────────────────────────────────────────────────────
+
+raiz-dst/
+├── app/
+│   └── raiz_dst.html          ← the working tool (always edit this one)
+├── versions/
+│   └── v1.0_raiz_dst.html     ← frozen snapshots (never edit these)
+├── docs/
+│   ├── model_equations.md     ← equation reference for papers
+│   └── development_log.md     ← key decisions and architecture notes
+├── README.md                  ← public-facing project description
+├── CHANGELOG.md               ← version history in plain language
+├── LICENSE                    ← MIT licence
+└── WORKFLOW.txt               ← this file
+
+
+═══════════════════════════════════════════════════════════════
+Bruelle, G. — RAIZ Project — https://orcid.org/0000-0002-8390-419X
+═══════════════════════════════════════════════════════════════
