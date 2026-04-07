@@ -107,15 +107,20 @@ Please open an issue before submitting a pull request.
 
 If you use this tool in research, please cite it as:
 
-Bruelle, G. (2025). *RAIZ Farm Analysis DST — Agroecological Decision Support Tool*.  
-GitHub. https://github.com/guillaume-bruelle/raiz-dst  
+CIRAD, University of Zimbabwe, CIMMYT (2025). *RAIZ Farm Analysis DST — Agroecological
+Decision Support Tool*. Developed by Bruelle, G. GitHub. https://github.com/guillaume-bruelle/raiz-dst  
 ORCID: https://orcid.org/0000-0002-8390-419X
+
+Produced with the financial assistance of the European Union through the RAIZ Project
+(Grant No. CTR FOOD/2021/424-933). The contents are the sole responsibility of CIRAD,
+University of Zimbabwe and CIMMYT, and do not reflect the position of the European Union.
 
 ---
 
 ## License
 
-MIT License — see [`LICENSE`](LICENSE) for details.
+[CeCILL-B Free Software License](LICENSE) — a permissive French open source license
+created by CEA, CNRS, and Inria, governed by French law.
 
 You are free to use, modify, and distribute this tool, including for commercial purposes,
-provided the original licence and copyright notice are retained.
+provided the original copyright and license notice are retained.

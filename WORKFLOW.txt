@@ -217,7 +217,7 @@ raiz-dst/
 │   └── development_log.md     ← key decisions and architecture notes
 ├── README.md                  ← public-facing project description
 ├── CHANGELOG.md               ← version history in plain language
-├── LICENSE                    ← MIT licence
+├── LICENSE                    ← CeCILL-B licence
 └── WORKFLOW.txt               ← this file
 
 
