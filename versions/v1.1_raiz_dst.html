@@ -676,10 +676,10 @@ textarea { resize: vertical; min-height: 56px; font-family: 'Outfit', sans-serif
     <ul class="step-list">
       <li><div class="step-body"><strong>Create a Project</strong><p>Go to 📁 Projects → enter a name and description → Create Project. Click ⚙ Edit to open the Parameters panel.</p></div></li>
       <li><div class="step-body"><strong>Define the Calendar</strong><p>Parameters → 📅 Calendar. Add periods (e.g. 4 periods of 92/90/91/92 days). Total must equal exactly 365.</p></div></li>
-      <li><div class="step-body"><strong>Define Crop Products</strong><p>Parameters → 🌽 Crop Products. Add every product that farms in this project grow, consume, sell, or buy. Enter selling and buying prices per period.</p></div></li>
-      <li><div class="step-body"><strong>Define Member Types</strong><p>Parameters → 👥 Member Types. Add household member categories (adult male, adult female, child...). Set labour capacity (days/year) and consumption needs per crop product.</p></div></li>
+      <li><div class="step-body"><strong>Define Crop Products</strong><p>Parameters → 🌽 Crop Products. Add every product that farms in this project grow, consume, sell, or buy. Enter selling and buying prices per period. You can also download the Excel template, fill it in, and import it.</p></div></li>
+      <li><div class="step-body"><strong>Define Member Types</strong><p>Parameters → 👥 Member Types. Add household member categories (adult male, adult female, child...). Set labour capacity (days/year) and consumption needs per crop product. Excel import available.</p></div></li>
       <li><div class="step-body"><strong>Set Hired Labour Price</strong><p>Parameters → 👷 Labour Price. Enter the daily wage for hired labour in USD/day.</p></div></li>
-      <li><div class="step-body"><strong>Define Cropping Systems</strong><p>Parameters → 🌱 Cropping Systems. For each system add outputs (yield kg/ha/period per product), labour tasks (days/ha/period), and inputs (USD/ha/period).</p></div></li>
+      <li><div class="step-body"><strong>Define Cropping Systems</strong><p>Parameters → 🌱 Cropping Systems. For each system add outputs (yield kg/ha/period per product), labour tasks (days/ha/period), and inputs (USD/ha/period). For large sets, download the Excel template, fill in the 4 sheets (systems, outputs, tasks, inputs), and import.</p></div></li>
       <li><div class="step-body"><strong>Create Farm Profiles</strong><p>Go to 🌾 Farms. Enter Farm ID, name, village → Create Profile. Then click Edit to go to data entry.</p></div></li>
       <li><div class="step-body"><strong>Enter Farm Data</strong><p>📋 Data Entry: fill in household composition, farm area, non-farm income sources, and the crop plan (which cropping systems, how many ha each).</p></div></li>
       <li><div class="step-body"><strong>Run the Analysis</strong><p>Click ▶ Run Analysis. Results appear in 📊 Results: resilience badges, KPIs, cash flow chart, food balance per product, labour table.</p></div></li>
@@ -706,6 +706,35 @@ textarea { resize: vertical; min-height: 56px; font-family: 'Outfit', sans-serif
       <li><strong>Inputs</strong> — named inputs with monetary costs (USD/ha) per period</li>
     </ul>
     <p>This structure replaces the fixed good-year/bad-year and Ext/Int categories from earlier versions. Each scenario corresponds to a named cropping system defined by the researcher.</p>
+
+    <h4>Excel Import &amp; Export</h4>
+    <p>Crop Products, Member Types and Cropping Systems can each be imported from and exported to Excel (<code>.xlsx</code>). Three buttons appear at the bottom of each section:</p>
+    <ul>
+      <li><strong>⬇ Template</strong> — downloads a blank Excel file with the correct column headers, including period names derived from the current calendar. Fill this in Excel or Google Sheets and import it.</li>
+      <li><strong>⬇ Export Data</strong> — downloads existing parameters in the same format, ready to share with another user or edit and re-import.</li>
+      <li><strong>⬆ Import</strong> — opens a file picker. Rows are <em>appended</em> to existing data (never replaced). The tool validates the file before importing:</li>
+    </ul>
+    <table class="var-table">
+      <thead><tr><th>Check</th><th>What happens if it fails</th></tr></thead>
+      <tbody>
+        <tr><td>Period count and names match</td><td>Import blocked — error message shows file vs project periods</td></tr>
+        <tr><td>Duplicate name</td><td>Row skipped — reported in the summary</td></tr>
+        <tr><td>Referenced product not found (CS outputs, MT consumption)</td><td>Row skipped — reported in the summary</td></tr>
+        <tr><td>Missing name field</td><td>Row skipped — reported in the summary</td></tr>
+      </tbody>
+    </table>
+    <p>The Cropping Systems workbook uses 4 sheets: <span class="tag-doc">systems</span>, <span class="tag-doc">outputs</span>, <span class="tag-doc">tasks</span>, <span class="tag-doc">inputs</span>. The Member Types workbook uses 2 sheets: <span class="tag-doc">member_types</span>, <span class="tag-doc">consumption</span>. The <span class="tag-doc">system_name</span> / <span class="tag-doc">member_name</span> columns link rows across sheets — they must match exactly.</p>
+    <p><span class="warn-inline">⚠ Define the calendar first</span> before downloading templates or importing. Period names in the file must exactly match those in the project calendar.</p>
+
+    <h4>Deletion protection</h4>
+    <p>Parameter items that are referenced elsewhere cannot be deleted until the references are removed first:</p>
+    <ul>
+      <li>A <strong>period</strong> cannot be deleted if any crop products or cropping systems exist (they store per-period data).</li>
+      <li>A <strong>crop product</strong> cannot be deleted if it is referenced in a member type consumption need or a cropping system output.</li>
+      <li>A <strong>member type</strong> cannot be deleted if any farm records a non-zero count for it.</li>
+      <li>A <strong>cropping system</strong> cannot be deleted if any farm uses it in its crop plan.</li>
+    </ul>
+    <p>The tool will show a message explaining exactly which items block the deletion and what to remove first. Sub-row deletions (consumption needs, CS outputs/tasks/inputs) ask for confirmation only.</p>
   </div>
 
   <!-- 5. FARMS -->
