@@ -1,0 +1,13 @@
+J'ai fait un petit morceau cohérent du modèle bien nettoyé en moins de 10 équations (9)
+
+Avec on pourrait sortir en résultat
+
+GM (équation 5) marge brute classique par culture et par ha pour comparaison internationale, comparaison entre culture, validation par les agronomes, les techniciens
+
+GMA (equation 6) on valorise l'autoconso tout en prenant en compte que seule une partie est destinée à la vente. Divisé par le nombre de jours de travail familial , on a la rémunération de celui-ci. Pour comparaison avec le prix du travail et le seuil de sécurité économique...WFP (équation 7) 
+
+GMM (équation 8) Gains monétaires associés à la parcelle
+
+Et le revenu agricole en prenant en compte l'autoconsommation (équation 9)
+
+les équations précédentes (1-4) sont nécessaires pour l'analyse
