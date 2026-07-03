@@ -5,7 +5,7 @@ Format: [version] — date — description
 
 ---
 
-## [v2.0] — 2026-07-02
+## [v2.0] — 2026-07-03
 
 ### Changed — model v2 (see docs/model_equations.md)
 - Calculation engine rewritten around the income cascade of the reference model
