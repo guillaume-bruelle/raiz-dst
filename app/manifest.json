@@ -1,0 +1,16 @@
+{
+  "name": "RAIZ Farm Analysis DST",
+  "short_name": "RAIZ DST",
+  "description": "Offline farm analysis decision support tool for extension agents — food security, income and labour balance of smallholder farms.",
+  "start_url": "./raiz_dst.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F5EFE0",
+  "theme_color": "#2C1810",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
