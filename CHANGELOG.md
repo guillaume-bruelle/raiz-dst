@@ -5,6 +5,11 @@ Format: [version] — date — description
 
 ---
 
+## [Unreleased]
+- Green theme matched to the new logo (forest-green header/nav, pale green
+  background, sage accents); dark brown body text and sun-yellow contrast kept
+- Farm list opens Data Entry on click, like projects open Parameters
+
 ## [v2.1] — 2026-07-06
 
 ### Added — biomass flows (product inputs)

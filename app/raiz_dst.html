@@ -11,7 +11,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RAIZ — Farm Analysis DST v2.1</title>
-<meta name="theme-color" content="#2C1810">
+<meta name="theme-color" content="#1E3D26">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -51,13 +51,17 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap');
 
+/* Theme matched to the RAIZ logo greens (#439152 line green, #3E8E4F/#5AA85F/#7FBF6A
+   field bands, #EEF5E9 pale ground). Dark brown kept for body text, sun yellow kept
+   as the contrast accent. Variable names keep their original earth-tone names so
+   nothing else changes. */
 :root {
-  --soil:   #2C1810; --earth:  #5C3D2E; --clay:   #A0714F;
-  --straw:  #E8D5A3; --leaf:   #3D6B4F; --leaf-l: #5A9B70;
+  --soil:   #1E3D26; --earth:  #2F6B3C; --clay:   #6B9A74;
+  --straw:  #E3F0DC; --leaf:   #439152; --leaf-l: #5AA85F;
   --sky:    #B8D4E8; --sun:    #E8A020;
   --alert:  #C0392B; --warn:   #E67E22; --ok:     #27AE60;
-  --bg:     #F5EFE0; --card:   #FFFDF5; --border: #D4C4A0;
-  --text:   #2C1810; --muted:  #7A6050;
+  --bg:     #EEF5E9; --card:   #FBFDF8; --border: #C4D9C1;
+  --text:   #2C1810; --muted:  #5C7561;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
@@ -2607,7 +2611,7 @@ function _renderResults(r, tag){
 
   // Entity colors, fixed across all results charts (validated for CVD & contrast)
   const CC={sales:'#2E7D4F', nfi:'#1273B4', inputs:'#D97706', hired:'#B4552D',
-            purchases:'#8E4585', ink:'#2C1810', surface:'#FFFDF5'};
+            purchases:'#8E4585', ink:'#2C1810', surface:'#FBFDF8'};
   const seg={borderColor:CC.surface,borderWidth:1,borderRadius:3};
 
   // Cash flow: income and expenses detailed as two stacks + cumulative line
