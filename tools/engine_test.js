@@ -144,5 +144,84 @@ const r4 = calcFarm(projL, farm);
 eq('legacy labour_days 365 → 100 % availability', r4.hh_supply[0], 184);
 eq('legacy kg_year read as annual need', r4.food.maize.hh_need, 400);
 
+// ── v2.1 Fixture 2: biomass loop (straw → cow → manure → field) ──────────
+// cereal (1 ha): grain 1000 + straw 500 in P3; 10 labour days P1; uses 200 kg manure P1
+// cow (2 heads): 10 L milk & 150 kg manure & eats 100 kg straw, per head per period
+// manure has NO market: prices 0 → tracked physically, economically neutral
+const projB = {
+  hired_labour_price: 5, wfp_threshold: 0,
+  units: { currency: 'USD', area: 'ha', quantity_units: ['kg', 'litre'] },
+  periods: proj.periods,
+  crop_products: [
+    { id: 'grain',  name: 'Grain',  unit: 'kg',    sell_price: flat(0.2),  buy_price: flat(0.3) },
+    { id: 'straw',  name: 'Straw',  unit: 'kg',    sell_price: flat(0.02), buy_price: flat(0.04) },
+    { id: 'manure', name: 'Manure', unit: 'kg',    sell_price: flat(0),    buy_price: flat(0) },
+    { id: 'milk',   name: 'Milk',   unit: 'litre', sell_price: flat(0.5),  buy_price: flat(0.6) }],
+  member_types: [{ id: 'adult', name: 'Adult', avail_pct: flat(100), consumption: [] }],
+  cropping_systems: [
+    { id: 'cs_cereal', name: 'Cereal mulched',
+      outputs: [{ cp_id: 'grain', yield_ha: [0, 0, 1000, 0] },
+                { cp_id: 'straw', yield_ha: [0, 0, 500, 0] }],
+      tasks:   [{ name: 'all', labour_ha: [10, 0, 0, 0] }],
+      inputs:  [],
+      mat_inputs: [{ cp_id: 'manure', qty_ha: [200, 0, 0, 0] }] }],
+  livestock_systems: [
+    { id: 'ls_cow', name: 'Cow', basis: 'head',
+      outputs: [{ cp_id: 'milk', yield_head: flat(10) },
+                { cp_id: 'manure', yield_head: flat(150) }],
+      tasks: [], inputs: [],
+      feeds: [{ cp_id: 'straw', kg_head: flat(100) }] }],
+};
+const farmB = { composition: { adult: 1 }, area: 2, nfi: [],
+  crop_plan: [{ cs_id: 'cs_cereal', area_ha: 1 }],
+  livestock_plan: [{ ls_id: 'ls_cow', heads: 2 }] };
+
+const rB = calcFarm(projB, farmB);
+const AB = id => rB.activities.find(a => a.id === id);
+
+// balances: straw prod 500 vs cow need 800 → 300 bought; manure prod 1200 vs field 200
+eq('straw herd_need (2×100×4)', rB.food.straw.herd_need, 800);
+eq('straw purchase (800−500)', rB.food.straw.purchase_kg, 300);
+eq('manure crop_need (200×1 ha)', rB.food.manure.crop_need, 200);
+eq('manure surplus (1200−200)', rB.food.manure.sold_kg, 1000);
+eq('manure surplus worth 0 (no market)', rB.food.manure.sell_cp.reduce((s, v) => s + v, 0), 0);
+// cereal: VQP 210; GMA = grain 200 sold + straw QC 500×0.04 − manure 0 = 220; GMM 200
+eq('cereal GM $/ha (210−0)', AB('cs_cereal').GM_unit, 210);
+eq('cereal GMA (200+20)', AB('cs_cereal').GMA, 220);
+eq('cereal GMM (200)', AB('cs_cereal').GMM, 200);
+eq('cereal MatC = 0 (manure priced 0)', AB('cs_cereal').MatC, 0);
+// cow: milk 40 − straw MatC 32 (800×0.04) → GMA 8; GMM 40 − purchased share 12 = 28
+eq('cow MatC (800×0.04)', AB('ls_cow').MatC, 32);
+eq('cow GMA (40−32)', AB('ls_cow').GMA, 8);
+eq('cow GMM (40−12)', AB('ls_cow').GMM, 28);
+// farm level: internal transfers cancel — no household consumption → FAI = MAI
+eq('FAI (220+8)', rB.FAI, 228);
+eq('MAI equals FAI (no hh self-consumption)', rB.MAI, rB.FAI);
+eq('cash: buy only 300 kg straw (12)', rB.buy_cost.reduce((s, v) => s + v, 0), 12);
+eq('end cash (grain 200 + milk 40 − straw 12)', rB.end_cash, 228);
+
+// ── v2.1 Fixture 3: household-priority food security ─────────────────────
+// grain 1000 produced; family eats 300, birds eat 800 → total deficit −100,
+// but production covers the household → food SECURE (deficit is economic only)
+const projC = {
+  hired_labour_price: 5, wfp_threshold: 0,
+  units: { currency: 'USD', area: 'ha', quantity_units: ['kg'] },
+  periods: proj.periods,
+  crop_products: [{ id: 'grain', name: 'Grain', unit: 'kg', sell_price: flat(0.2), buy_price: flat(0.3) }],
+  member_types: [{ id: 'adult', name: 'Adult', avail_pct: flat(100),
+    consumption: [{ cp_id: 'grain', qty_day: 300 / 365 }] }],
+  cropping_systems: [{ id: 'cs_g', name: 'Grain',
+    outputs: [{ cp_id: 'grain', yield_ha: [0, 0, 1000, 0] }], tasks: [], inputs: [], mat_inputs: [] }],
+  livestock_systems: [{ id: 'ls_b', name: 'Birds', basis: 'herd',
+    outputs: [], tasks: [], inputs: [], feeds: [{ cp_id: 'grain', kg_head: flat(200) }] }],
+};
+const farmC = { composition: { adult: 1 }, area: 1, nfi: [],
+  crop_plan: [{ cs_id: 'cs_g', area_ha: 1 }],
+  livestock_plan: [{ ls_id: 'ls_b', heads: 1 }] };
+const rC = calcFarm(projC, farmC);
+eq('grain total need (300 hh + 800 birds)', rC.food.grain.tot_need, 1100);
+eq('grain purchase (deficit 100)', rC.food.grain.purchase_kg, 100);
+is('food SECURE despite total deficit (production ≥ household need)', rC.food_secure === true);
+
 console.log(fails ? `\n${fails} FAILURE(S)` : '\nALL ENGINE CHECKS PASSED');
 process.exit(fails ? 1 : 0);

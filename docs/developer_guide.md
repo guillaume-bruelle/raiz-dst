@@ -313,6 +313,9 @@ reload"** (or use a hard reload) so you always see your latest push.
   your edits precisely; treat the `vendor-*` blocks as opaque.
 - **Search by block id / function name, never by line number** — the vendored
   libraries make line numbers meaningless and unstable.
+- **VS Code shows a phantom `'}' expected` error near the end of the file.**
+  Its language service cannot fully parse the embedded minified SheetJS. It is a
+  false positive — `node tools/check_syntax.js` is the authority on syntax.
 - **Every user string that enters HTML goes through `_esc()`.** A farm named
   `<img onerror=...>` must render as text, not execute.
 - **Quoting in inline handlers is fragile.** The pattern

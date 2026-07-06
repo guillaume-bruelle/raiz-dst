@@ -20,18 +20,29 @@ Sources: `main-equations-model.docx` (equations 1–9), `quels-indicateurs.txt`
 2. **Self-consumption (QC) is derived, not entered.** `QC[cp] = min(production, need)`.
    The v1 surplus/deficit balance logic is kept as the allocation rule.
 3. **Livestock mirrors crops.** A livestock system (ls) is parameterised **per head**
-   exactly as a cropping system (cs) is per hectare: labour tasks, input costs,
-   outputs — plus feed requirements. A farm holds a herd plan (heads per ls) like a
-   crop plan (ha per cs).
-4. **Forage is a product.** Herd feed demand enters the same balance logic as
-   household food: on-farm production covers need first, deficits are bought,
-   surpluses sold. Pasture is represented as a cropping system (pasture ha → forage
-   product at low/zero cost); no special case in the engine.
+   (or per whole herd, see `basis`) exactly as a cropping system (cs) is per hectare:
+   labour tasks, input costs, outputs — plus product inputs. A farm holds a herd plan
+   (heads per ls) like a crop plan (ha per cs).
+4. **Biomass flows are products.** Any activity can *produce* any product (grain,
+   straw, milk, manure, forage) and any activity can *consume* any product through
+   its **product inputs** (feed for livestock; mulch, fertiliser, seed for crops).
+   All on-farm uses enter the same balance logic as household food: on-farm
+   production covers need first, deficits are bought, surpluses sold. Pasture is
+   simply a cropping system producing a forage product; no special case in the
+   engine, and no circularity — quantities are fixed coefficients per unit of
+   scale, so one pass computes everything.
 5. **Internal transfers are valued at consumer price (PropC = buy price).**
-   Self-consumed food and self-grown feed are valued at PropC in GMA-type
-   indicators. Because the crop side is credited and the livestock side debited at
-   the same price, internal feed transfers cancel at farm level — FAI has no
-   double counting.
+   Self-consumed food and self-produced product inputs are valued at PropC in
+   GMA-type indicators. Because the producing activity is credited and the
+   consuming activity debited at the same price, internal transfers cancel at farm
+   level — FAI has no double counting. Products with no real market (e.g. manure)
+   can be given zero prices — their flows are then tracked physically but are
+   economically neutral — or a **shadow price**, which makes biomass recycling
+   visible in the margins. This is a per-product data choice, not a model change.
+6. **Food security is household-priority.** The family is assumed to eat first
+   from its own production: a product is food-secure when production covers the
+   *household* need, even if farm uses push the total balance negative (the
+   resulting purchases still appear in cash flow and GMM).
 
 ---
 
@@ -96,20 +107,22 @@ Each input line carries an optional subsidy rate `subv ∈ [0,1]`
 
 Livestock outputs (eggs, milk, meat/offtake in kg) are products like any other.
 
-## 5. Needs: Household + Herd
+## 5. Needs: Household + On-Farm Use
 
-Household consumption is declared per person per day (in the product's unit):
+Household consumption is declared per person per day (in the product's unit).
+On-farm use covers livestock feed AND crop product inputs (mulch, fertiliser,
+seed…), both expressed per unit of scale per period:
 
     hh_need[cp]   = Σ_mt ( count[mt] × qty_day[mt,cp] × 365 )
-    herd_need[cp] = Σ_ls Σ_i ( feed_head[ls,cp,i] × heads[ls] )
-    need[cp]      = hh_need[cp] + herd_need[cp]
+    herd_need[cp] = Σ_ls Σ_i ( feed_head[ls,cp,i]  × heads[ls] )     (livestock feed)
+    crop_need[cp] = Σ_cs Σ_i ( use_ha[cs,cp,i]     × area_ha[cs] )   (crop product inputs)
+    need[cp]      = hh_need[cp] + herd_need[cp] + crop_need[cp]
 
-    need_pp[cp,i] = Σ_mt ( count[mt] × qty_day[mt,cp] × days[i] ) + herd feed of period i
+    need_pp[cp,i] = Σ_mt ( count[mt] × qty_day[mt,cp] × days[i] ) + on-farm use of period i
                     (per-period need, used for the food balance charts)
 
-`feed_head[ls,cp,i]` is the feed requirement (product units per head — or per herd,
-see §Data model — per period) of livestock system ls for product cp (typically the
-forage product; several feed products are allowed).
+Note the balance is annual: production of any period can cover use in any period
+of the same year (a deliberate simplification, identical to the food logic).
 
 ## 6. Self-Consumption, Balance & Trade
 
@@ -148,8 +161,9 @@ Building blocks:
                                                           pro rata production)
     VQP_a       = Σ_i Σ_cp QP_a[cp,i] × ProP[cp,i]                   (doc eq. 2)
     InpC_a      = Σ_i Σ_inp cost[inp,i] × (1 − subv[inp]) × S_a
-    FeedC_a     = Σ_i Σ_cp feed_head[a,cp,i] × S_a × PropC[cp,i]     (livestock only;
-                  all feed valued at consumer price, own-grown or bought)
+    MatC_a      = Σ_i Σ_cp use[a,cp,i] × S_a × PropC[cp,i]
+                  (material/product inputs — livestock feed or crop mulch, seed,
+                  fertiliser — all valued at consumer price, own-produced or bought)
     demand_a[i] = Σ_task labour[task,i] × S_a
     LabC_a      = Σ_i demand_a[i] × hf[i] × w            (hired share of a's labour)
     FamD_a      = Σ_i demand_a[i] × (1 − hf[i])          (family labour days on a)
@@ -160,7 +174,7 @@ Classic economist margin: all production valued at producer price, regardless of
 destination. For international / inter-crop comparison and expert validation.
 Reported **per unit of scale** ($/ha or $/head).
 
-    GM_a = ( VQP_a − InpC_a − FeedC_a − LabC_a ) / S_a
+    GM_a = ( VQP_a − InpC_a − MatC_a − LabC_a ) / S_a
 
 ### GMA — Return including self-consumption *(doc eq. 6)*
 
@@ -168,7 +182,7 @@ Self-consumed quantities valued at consumer price (what the household would have
 paid), sold quantities at producer price. Total per activity ($).
 
     GMA_a = Σ_i Σ_cp [ (QP_a − QC_a)[cp,i] × ProP[cp,i] + QC_a[cp,i] × PropC[cp,i] ]
-            − InpC_a − FeedC_a − LabC_a
+            − InpC_a − MatC_a − LabC_a
 
 ### WFP — Family work productivity *(doc eq. 7)*
 
@@ -181,13 +195,13 @@ set according to food self-sufficiency and dependents per worker).
 ### GMM — Monetary margin *(doc eq. 8)*
 
 Only monetary flows: self-consumption not valued, and only the **purchased** share
-of feed is a cost. Matches household objectives and eases dialogue with farmers
-(pair it with in-kind gains: "x kg fed the family").
+of product inputs is a cost. Matches household objectives and eases dialogue with
+farmers (pair it with in-kind gains: "x kg fed the family").
 
     pf[cp]     = purchase_kg[cp] / need[cp]              (purchased fraction; 0 if need = 0)
-    FeedCm_a   = Σ_i Σ_cp feed_head[a,cp,i] × S_a × pf[cp] × PropC[cp,i]
+    MatCm_a    = Σ_i Σ_cp use[a,cp,i] × S_a × pf[cp] × PropC[cp,i]
 
-    GMM_a = Σ_i Σ_cp (QP_a − QC_a)[cp,i] × ProP[cp,i] − InpC_a − FeedCm_a − LabC_a
+    GMM_a = Σ_i Σ_cp (QP_a − QC_a)[cp,i] × ProP[cp,i] − InpC_a − MatCm_a − LabC_a
 
 ---
 
@@ -200,8 +214,8 @@ of feed is a cost. Matches household objectives and eases dialogue with farmers
 
     WFP_farm  = FAI / Σ_a FamD_a     Farm-level family work productivity
 
-Consistency property: internal feed transfers cancel in FAI (crop side credited,
-livestock side debited at the same PropC), so
+Consistency property: internal product-input transfers cancel in FAI (the
+producing activity credited, the consuming activity debited at the same PropC), so
 
     FAI = MAI + Σ_cp (household + own-herd self-consumption valued at PropC)
 
@@ -209,9 +223,13 @@ with no double counting. v1's GFM/GM aggregates are superseded by MAI/HH_income.
 Note: household food purchases (deficits) are consumption expenses — they appear
 in cash flow (§7) but not in FAI/MAI.
 
-## 10. Resilience Classification (unchanged)
+## 10. Resilience Classification
 
-    food_secure = all cp with hh_need[cp] > 0 have balance[cp] ≥ 0
+Food security is **household-priority** (see design decision 6): production must
+cover the household's own need; deficits caused by on-farm use don't threaten it
+(they are visible in cash flow and GMM instead).
+
+    food_secure = all cp with hh_need[cp] > 0 have tot_prod[cp] ≥ hh_need[cp]
     econ_secure = end_cash ≥ 0
 
     Secure     : food_secure AND econ_secure
@@ -230,6 +248,7 @@ and vs. the hired wage w; forage balance (herd feed self-sufficiency).
 | `project.units` (new) | `{ currency, area, quantity_units[] }` — display labels only, never converted. |
 | `crop_products` | Generalised to **products** (crop, animal, forage): `{ id, name, unit, sell_price[i], buy_price[i] }`. |
 | `cropping_systems.inputs[]` | Add optional `subsidy` (0–1, default 0). |
+| `cropping_systems.mat_inputs[]` (new, v2.1) | `{ cp_id, qty_ha[i] }` — product inputs consumed per ha per period (mulch, fertiliser, seed…). Mirror of livestock `feeds`. |
 | `livestock_systems[]` (new) | `{ id, name, basis:'head'\|'herd', tasks:[{ labour_head[i] }], inputs:[{ cost_head[i], subsidy }], feeds:[{ cp_id, kg_head[i] }], outputs:[{ cp_id, yield_head[i] }] }` — strict mirror of a cropping system. `basis` says whether quantities are per animal or per whole herd; the engine only multiplies by the plan's count. |
 | `farm.livestock_plan[]` (new) | `{ ls_id, heads }` — number of heads (basis 'head') or herds (basis 'herd'). |
 | `member_types` | `labour_days` (days/year) replaced by `avail_pct[i]` (% of each period's days). |

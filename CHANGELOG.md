@@ -5,7 +5,31 @@ Format: [version] — date — description
 
 ---
 
-## [Unreleased]
+## [v2.1] — 2026-07-06
+
+### Added — biomass flows (product inputs)
+- Any activity can now consume products, not just livestock: cropping systems
+  gain **Product Inputs** (quantity of a product per ha per period — mulch,
+  manure as fertiliser, saved seed…), mirroring livestock feeds
+- Biomass can circulate between activities: crop residues feed livestock,
+  manure fertilises fields — all through the shared product balance
+  (on-farm production covers use first; deficits bought, surpluses sold)
+- Products without a market (e.g. manure) can carry zero prices (physically
+  tracked, economically neutral) or a shadow price (recycling visible in margins)
+- Income cascade generalised: FeedC becomes MatC (material/product input cost)
+  for every activity; internal transfers still cancel in FAI (no double counting)
+- Product balance cards show a cascade: Produced − Household − Livestock feed −
+  Crop use = Balance, with purchase/surplus — the "why" of every deficit
+- Research CSV: need split into NeedHH / NeedFeed / NeedCropUse per product
+- Cropping-systems Excel workbook gains a 5th sheet `product_inputs`
+  (older 4-sheet files still import)
+
+### Changed — food security definition (household-priority)
+- A product is food-secure when production covers the **household's** need;
+  deficits caused by on-farm use (feed, mulch) are economic matters visible in
+  cash flow and GMM, and no longer flag food insecurity
+
+### Changed — layout
 - On narrow screens (≤768px) the main menu and the Parameters sub-menu become
   native drop-down lists instead of horizontally scrolling button rows
 
