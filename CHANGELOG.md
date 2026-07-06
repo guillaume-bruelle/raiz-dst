@@ -5,6 +5,10 @@ Format: [version] — date — description
 
 ---
 
+## [Unreleased]
+- On narrow screens (≤768px) the main menu and the Parameters sub-menu become
+  native drop-down lists instead of horizontally scrolling button rows
+
 ## [v2.0] — 2026-07-03
 
 ### Changed — model v2 (see docs/model_equations.md)

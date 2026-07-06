@@ -85,6 +85,15 @@ nav.sub-nav button { padding: 0.5rem 1rem; background: none; border: none; borde
 nav.sub-nav button.active { color: var(--leaf); border-bottom-color: var(--leaf); font-weight: 600; }
 nav.sub-nav button:hover { color: var(--earth); }
 
+/* ── NARROW SCREENS: menus become drop-down lists (native Android picker) ── */
+.nav-select { display: none; width: auto; flex: 1; margin: .45rem .8rem; padding: .5rem .6rem; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: .88rem; font-weight: 600; min-height: 40px; }
+nav.main-nav .nav-select { background: var(--soil); color: var(--straw); border: 1.5px solid var(--sun); }
+nav.sub-nav  .nav-select { background: var(--card); color: var(--earth); border: 1.5px solid var(--border); margin: .45rem 0; }
+@media (max-width: 768px) {
+  nav.main-nav button, nav.sub-nav button { display: none; }
+  .nav-select { display: block; }
+}
+
 /* ── PAGES & PANELS ── */
 .page { display: none; padding: 1.6rem 2rem; max-width: 1080px; margin: 0 auto; width: 100%; }
 .page.active { display: block; }
@@ -251,6 +260,16 @@ textarea { resize: vertical; min-height: 56px; font-family: 'Outfit', sans-serif
   <button id="nav-scenarios" onclick="showPage('scenarios')">🔀 Scenarios</button>
   <button id="nav-sessions"  onclick="showPage('sessions')">💾 Sessions &amp; Export</button>
   <button id="nav-docs"      onclick="showPage('docs')">📖 Guide</button>
+  <select id="nav-select" class="nav-select" onchange="showPage(this.value)">
+    <option value="projects">📁 Projects</option>
+    <option value="params">⚙ Parameters</option>
+    <option value="farms">🌾 Farms</option>
+    <option value="entry">📋 Data Entry</option>
+    <option value="results">📊 Results</option>
+    <option value="scenarios">🔀 Scenarios</option>
+    <option value="sessions">💾 Sessions &amp; Export</option>
+    <option value="docs">📖 Guide</option>
+  </select>
 </nav>
 
 <!-- PARAM SUB-NAV -->
@@ -263,6 +282,16 @@ textarea { resize: vertical; min-height: 56px; font-family: 'Outfit', sans-serif
   <button id="sub-labour"  onclick="showPanel('labour')">👷 Labour &amp; Thresholds</button>
   <button id="sub-cs"      onclick="showPanel('cs')">🌱 Cropping Systems</button>
   <button id="sub-ls"      onclick="showPanel('ls')">🐄 Livestock Systems</button>
+  <select id="subnav-select" class="nav-select" onchange="showPanel(this.value)">
+    <option value="info">🗂 Project Info</option>
+    <option value="cal">📅 Calendar</option>
+    <option value="units">📏 Units &amp; Currency</option>
+    <option value="crops">📦 Products</option>
+    <option value="members">👥 Member Types</option>
+    <option value="labour">👷 Labour &amp; Thresholds</option>
+    <option value="cs">🌱 Cropping Systems</option>
+    <option value="ls">🐄 Livestock Systems</option>
+  </select>
 </nav>
 
 <!-- ============================================================
@@ -1122,7 +1151,7 @@ resilience:
     <ul>
       <li>Buttons and input fields are sized for finger tapping (minimum 34px height)</li>
       <li>Use landscape orientation on phones for tables and charts; wide tables scroll sideways within their card</li>
-      <li>The navigation bar scrolls horizontally — swipe left to see all tabs</li>
+      <li>On narrow screens the tab bars become drop-down lists — tap to pick a page or a parameters section; on wider screens (landscape tablet, PC) they are button rows</li>
       <li>Download sessions via the ⬇ button — files land in the device's Downloads folder</li>
       <li>Load sessions by tapping ⬆ Load from file and selecting from Downloads</li>
       <li>Parameter setup (cropping/livestock systems) is most comfortable on a tablet or PC; farm data entry and results work well on a phone</li>
@@ -1235,6 +1264,7 @@ function showPage(id){
   document.querySelectorAll('nav.main-nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id)?.classList.add('active');
   document.getElementById('nav-'+id)?.classList.add('active');
+  const navSel=document.getElementById('nav-select'); if(navSel) navSel.value=id;
 
   const subNav = document.getElementById('sub-nav');
   if(id==='params'){
@@ -1254,6 +1284,7 @@ function showPanel(id){
   document.querySelectorAll('nav.sub-nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+id)?.classList.add('active');
   document.getElementById('sub-'+id)?.classList.add('active');
+  const subSel=document.getElementById('subnav-select'); if(subSel) subSel.value=id;
 
   const p = activeProj();
   const noProj   = document.getElementById('params-no-proj');
