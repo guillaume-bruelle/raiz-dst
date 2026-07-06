@@ -2147,7 +2147,7 @@ function renderFarmList(){
   list.innerHTML=keys.map(id=>{
     const f=p.farms[id]; const sel=selectedFarmId===id;
     const used=(f.crop_plan||[]).reduce((s,r)=>s+(r.area_ha||0),0);
-    return `<div style="background:${sel?'#F0F7F3':''};border:1px solid ${sel?'var(--leaf)':'var(--border)'};border-radius:8px;padding:.72rem 1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;cursor:pointer;" onclick="selectFarm('${id}')">
+    return `<div style="background:${sel?'#F0F7F3':''};border:1px solid ${sel?'var(--leaf)':'var(--border)'};border-radius:8px;padding:.72rem 1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;cursor:pointer;" onclick="selectFarm('${id}');showPage('entry')">
       <div>
         <div style="font-weight:600;">${_esc(f.name)} <span class="tag">${_esc(id)}</span></div>
         <div class="muted mono" style="font-size:.72rem;">${_esc(f.village||'—')} · ${f.area||0} ${_esc(_areaU(p))} · ${used.toFixed(1)} ${_esc(_areaU(p))} cropped</div>
