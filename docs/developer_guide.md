@@ -5,7 +5,7 @@ and who is more at home in R or Python than in JavaScript. No web-development
 background is assumed beyond "I have edited an HTML file before".
 
 Companion documents: [`model_equations.md`](model_equations.md) owns the maths;
-[`../WORKFLOW.txt`](../WORKFLOW.txt) owns the git/release routine; the in-app
+[`../WORKFLOW.md`](../WORKFLOW.md) owns the git/release routine; the in-app
 📖 Guide tab owns user-facing documentation. This file owns the code.
 
 ---
@@ -272,7 +272,7 @@ replace the entire content between `<script id="vendor-...">` and its
 checks, then load the app and open every chart and one Excel export.
 
 ### 6.9 Release a version
-Follow [`WORKFLOW.txt`](../WORKFLOW.txt): bump the `<title>` version, copy the
+Follow [`WORKFLOW.md`](../WORKFLOW.md): bump the `<title>` version, copy the
 file to `versions/vX.Y_raiz_dst.html`, add the CHANGELOG entry, commit
 `release: vX.Y`, push. Pushing `main` publishes automatically to GitHub Pages
 (the `.nojekyll` file at the repo root must stay). Installed Android apps pick
@@ -342,6 +342,6 @@ reload"** (or use a hard reload) so you always see your latest push.
 | `docs/model_equations.md` | the mathematical model | any equation/schema change (first!) |
 | `docs/developer_guide.md` | this — code architecture & practices | patterns, blocks or tooling change |
 | In-app 📖 Guide | user-facing manual incl. simplified equations | any user-visible change |
-| `WORKFLOW.txt` | git & release routine for non-developers | process changes |
+| `WORKFLOW.md` | git, commit & release routine | process changes |
 | `CHANGELOG.md` | version history | every release |
 | `tools/` | executable checks | with every model change |
