@@ -65,6 +65,13 @@ when fixed.
   only uses it to colour a KPI card and it is not part of the class (as
   model_equations.md line 239 and section 3 of the report say). Align wording.
 
+- [ ] README citation says "(2025)" while LICENSE copyright says 2026.
+- [ ] README "Repository structure" omits `tools/` (check_syntax.js,
+  engine_test.js) and WORKFLOW.md.
+- [ ] Fonts (DM Serif Display, DM Mono, Outfit) load from Google Fonts: the
+  service worker caches them once seen, otherwise system fonts are used
+  offline. Consider embedding them if the look matters offline.
+
 ## Template workbooks
 
 - [x] docs/template-zim/02_member_types_data.xlsx, sheet `consumption`:
